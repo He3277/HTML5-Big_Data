@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>空气质量数据可视化 - 导航页</title>
+    <!-- 引入外部资源 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+
+    <!-- Tailwind 自定义配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0A192F',
+                        semiBlue: '#112240',
+                        lightBlue: '#64FFDA',
+                        secondaryBlue: '#4CC9F0',
+                        titleBlue: '#50D1B2', // 调低亮度后的标题色
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                        'flow': 'flow 15s linear infinite',
+                        'typing': 'typing 3.5s steps(40, end), blink .75s step-end infinite',
+                        'spin-slow': 'spin 8s linear infinite',
+                        'bounce-slow': 'bounce 3s infinite',
+                        'breath': 'breath 3s ease-in-out infinite alternate',
+                    },
+                    keyframes: {
+                        glow: {
+                            '0%': { textShadow: '0 0 2px #50D1B2, 0 0 4px #50D1B2' }, // 大幅弱化发光效果
+                            '100%': { textShadow: '0 0 4px #50D1B2, 0 0 8px #50D1B2, 0 0 12px #4CC9F0' },
+                        },
+                        flow: {
+                            '0%': { strokeDashoffset: '0' },
+                            '100%': { strokeDashoffset: '1000' },
+                        },
+                        typing: {
+                            'from': { width: '0' },
+                            'to': { width: '100%' },
+                        },
+                        blink: {
+                            'from, to': { borderColor: 'transparent' },
+                            '50%': { borderColor: '#50D1B2' },
+                        },
+                        breath: {
+                            '0%': { transform: 'scale(0.95)' },
+                            '100%': { transform: 'scale(1.05)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- 自定义工具类 -->
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .card-glow {
+                box-shadow: 0 0 15px rgba(80, 209, 178, 0.1), 0 0 30px rgba(76, 201, 240, 0.05);
+            }
+            .card-hover::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(80, 209, 178, 0.1), transparent);
+                transition: left 0.8s ease;
+                pointer-events: none;
+                border-radius: 16px 4px 16px 4px; /* 替换为不规则圆角轮廓 */
+            }
+            .card-hover:hover::before {
+                left: 100%;
+            }
+            .text-shadow-glow {
+                text-shadow: 0 0 2px #50D1B2, 0 0 4px #4CC9F0;
+            }
+            .skeleton-line {
+                background: linear-gradient(90deg, rgba(80, 209, 178, 0.1), rgba(76, 201, 240, 0.2), rgba(80, 209, 178, 0.1));
+                background-size: 200% 100%;
+                animation: skeleton-loading 1.5s infinite;
+            }
+            @keyframes skeleton-loading {
+                0% { background-position: 200% 0; }
+                100% { background-position: -200% 0; }
+            }
+            /* 板块新轮廓样式 */
+            .card-outline {
+                border-radius: 16px 4px 16px 4px; /* 不规则圆角 */
+                border: 1px solid rgba(80, 209, 178, 0.2);
+                position: relative;
+                overflow: hidden;
+            }
+            .card-outline::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                right: 0;
+                width: 40px;
+                height: 40px;
+                border-bottom: 2px solid rgba(80, 209, 178, 0.3);
+                border-left: 2px solid rgba(80, 209, 178, 0.3);
+                border-radius: 0 0 0 12px;
+            }
+            .card-outline::before {
+                content: '';
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                width: 40px;
+                height: 40px;
+                border-top: 2px solid rgba(80, 209, 178, 0.3);
+                border-right: 2px solid rgba(80, 209, 178, 0.3);
+                border-radius: 0 12px 0 0;
+            }
+            /* 动态SVG图标通用样式 */
+            .icon-svg {
+                width: 60px;
+                height: 60px;
+                fill: #50D1B2;
+                stroke: #50D1B2;
+                stroke-width: 1;
+                transition: all 0.3s ease;
+            }
+            .card-hover:hover .icon-svg {
+                fill: #4CC9F0;
+                stroke: #4CC9F0;
+                filter: drop-shadow(0 0 8px rgba(76, 201, 240, 0.5));
+            }
+        }
+    </style>
+
+    <style>
+        body {
+            background-color: #0A192F;
+            overflow-x: hidden;
+        }
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+        .container {
+            position: relative;
+            z-index: 1;
+        }
+        .typing-container {
+            overflow: hidden;
+            border-right: 2px solid #50D1B2;
+            white-space: nowrap;
+            margin: 0 auto;
+            animation: typing 3.5s steps(40, end), blink .75s step-end infinite;
+        }
+        .particle-color-transition {
+            transition: filter 0.5s ease;
+        }
+        /* 太阳和地平线样式 */
+        .sun-horizon {
+            position: relative;
+            width: 280px;
+            height: 140px;
+            margin: 16px auto 24px;
+        }
+        .horizon-line {
+            position: absolute;
+            bottom: 30px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #50D1B2, transparent);
+            animation: horizon-glow 3s ease-in-out infinite alternate;
+        }
+        .sun-circle {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 40px;
+            background: radial-gradient(circle, #50D1B2 0%, #4CC9F0 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 10px #50D1B2, 0 0 20px rgba(76, 201, 240, 0.3); /* 弱化太阳发光 */
+            animation: sun-rise 8s ease-in-out infinite alternate;
+        }
+        @keyframes horizon-glow {
+            0% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        @keyframes sun-rise {
+            0% { bottom: 10px; }
+            100% { bottom: 40px; }
+        }
+    </style>
+</head>
+<body class="text-white font-sans">
+    <!-- 粒子背景 -->
+    <div id="particles-js" class="particle-color-transition"></div>
+
+    <!-- 主容器 -->
+    <div class="container mx-auto px-4 py-12 md:py-20">
+        <!-- 页面标题 -->
+        <header class="text-center mb-16 md:mb-20">
+            <!-- 增大字体+降低亮光的大标题 -->
+            <h1 class="text-[clamp(2.5rem,7vw,4.5rem)] font-bold text-titleBlue animate-glow mb-4">
+               清穹智析 — 空气质量大数据可视化平台
+            </h1>
+            
+            <!-- 保留太阳和地平线图形 -->
+            <div class="sun-horizon">
+                <div class="horizon-line"></div>
+                <div class="sun-circle"></div>
+            </div>
+            
+            <!-- 保留原有介绍文段 -->
+            <p class="text-gray-300 text-lg md:text-xl max-w-4xl mx-auto leading-relaxed mb-6">
+                本平台聚焦空气质量数据的多维度可视化分析，整合全国34个省级行政区、338个地级以上城市的<br/>
+                实时及历史空气质量数据，通过时空分布、趋势对比、健康预警、污染源溯源等维度，<br/>
+                直观呈现空气质量变化规律及影响因素，为环境治理和健康决策提供数据支撑。
+            </p>
+            
+            <p class="text-gray-400 text-lg md:text-xl max-w-3xl mx-auto typing-container">
+                时空洞察 · 多维分析 · 智能预警 · 成因溯源
+            </p>
+        </header>
+
+        <!-- 导航板块网格 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10">
+            <!-- 板块1：数据总览·时空洞察 - 动态地图图标 -->
+            <a href="./realtime-map.html" class="block">
+                <div class="relative bg-semiBlue/80 p-8 card-glow card-hover card-outline h-full overflow-hidden transition-all duration-500 hover:scale-[1.02]">
+                    <!-- 流光地图背景 -->
+                    <div class="absolute inset-0 opacity-20">
+                        <svg width="100%" height="100%" viewBox="0 0 960 600" fill="none">
+                            <path d="M150,200 L200,180 L250,220 L300,200 L350,240 L400,220 L450,260 L500,240 L550,280 L600,260 L650,300 L700,280 L750,320 L700,360 L650,340 L600,380 L550,360 L500,400 L450,380 L400,420 L350,400 L300,440 L250,420 L200,460 L150,440 L150,200" 
+                                  stroke="#50D1B2" stroke-width="1.5" fill="none" stroke-dasharray="1000" class="animate-flow">
+                                <animate attributeName="opacity" values="0.3;0.8;0.3" dur="3s" repeatCount="indefinite"/>
+                            </path>
+                        </svg>
+                    </div>
+                    <!-- 核心内容 -->
+                    <div class="relative z-10 text-center">
+                        <div class="mb-6 flex justify-center animate-breath">
+                            <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zM12 11.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                                <circle cx="12" cy="9" r="2.5">
+                                    <animate attributeName="r" values="2.5;3;2.5" dur="2s" repeatCount="indefinite"/>
+                                </circle>
+                                <path d="M3 9c0-1.1.9-2 2-2h14c1.1 0 2 .9 2 2v6c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V9z" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <animate attributeName="stroke-opacity" values="0.5;1;0.5" dur="3s" repeatCount="indefinite"/>
+                                </path>
+                            </svg>
+                        </div>
+                        <h2 class="text-2xl font-semibold mb-6 text-shadow-glow">数据总览·时空洞察</h2>
+                        <div class="flex justify-center gap-8 mb-6">
+                            <div>
+                                <p class="text-gray-400 text-sm mb-2">全国AQI均值</p>
+                                <p class="text-3xl text-titleBlue dynamic-number" data-target="78">0</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-400 text-sm mb-2">超标城市</p>
+                                <p class="text-3xl text-titleBlue dynamic-number" data-target="29">0</p>
+                            </div>
+                        </div>
+                        <p class="text-gray-400 text-sm">点击查看分区域时空分布详情</p>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 板块2：多维度分析·价值挖掘 - 动态图表图标 -->
+            <a href="./comparison-analysis.html" class="block">
+                <div class="relative bg-semiBlue/80 p-8 card-glow card-hover card-outline h-full overflow-hidden transition-all duration-500 hover:scale-[1.02]">
+                    <!-- 折线骨架屏背景 -->
+                    <div class="absolute inset-0 opacity-20 flex items-center justify-center">
+                        <div class="w-full h-32">
+                            <div class="skeleton-line h-2 w-full rounded mb-4"></div>
+                            <div class="skeleton-line h-2 w-4/5 rounded mb-4"></div>
+                            <div class="skeleton-line h-2 w-3/4 rounded mb-4"></div>
+                            <div class="skeleton-line h-2 w-5/6 rounded"></div>
+                        </div>
+                    </div>
+                    <!-- 核心内容 -->
+                    <div class="relative z-10 text-center">
+                        <div class="mb-6 flex justify-center">
+                            <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <animate attributeName="points" values="22 12 18 12 15 21 9 3 6 12 2 12;22 10 18 14 15 18 9 6 6 10 2 14;22 12 18 12 15 21 9 3 6 12 2 12" dur="3s" repeatCount="indefinite"/>
+                                </polyline>
+                                <line x1="6" y1="12" x2="18" y2="12" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <animate attributeName="stroke-opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite"/>
+                                </line>
+                            </svg>
+                        </div>
+                        <h2 class="text-2xl font-semibold mb-6 text-shadow-glow">多维度分析·价值挖掘</h2>
+                        <div class="flex flex-wrap justify-center gap-3 mb-6">
+                            <span class="px-3 py-1 bg-titleBlue/10 rounded-full text-titleBlue text-sm hover:bg-titleBlue/20 transition-colors">空间对比</span>
+                            <span class="px-3 py-1 bg-titleBlue/10 rounded-full text-titleBlue text-sm hover:bg-titleBlue/20 transition-colors">时间趋势</span>
+                            <span class="px-3 py-1 bg-titleBlue/10 rounded-full text-titleBlue text-sm hover:bg-titleBlue/20 transition-colors">政策影响</span>
+                        </div>
+                        <p class="text-gray-400 text-sm">点击选择维度，深度对比空气质量关联规律</p>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 板块3：健康决策·智能预警 - 动态盾牌图标 -->
+            <a href="./health-warning.html" class="block">
+                <div class="relative bg-semiBlue/80 p-8 card-glow card-hover card-outline h-full overflow-hidden transition-all duration-500 hover:scale-[1.02]">
+                    <!-- 脉冲光效背景 -->
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="w-32 h-32 rounded-full border-2 border-titleBlue/30 animate-ping opacity-30"></div>
+                        <div class="w-24 h-24 rounded-full border-2 border-titleBlue/50 animate-ping opacity-50 delay-700"></div>
+                    </div>
+                    <!-- 核心内容 -->
+                    <div class="relative z-10 text-center">
+                        <div class="mb-6 flex justify-center animate-breath">
+                            <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M12 14l-1-2h2v-2h-2l-1-2h-1v2h-1v2h1l1 2h-1v2h1l1 2h1v-2h1v-2h-1z" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <animate attributeName="stroke-opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite"/>
+                                </path>
+                                <circle cx="12" cy="12" r="4">
+                                    <animate attributeName="r" values="4;5;4" dur="3s" repeatCount="indefinite"/>
+                                </circle>
+                            </svg>
+                        </div>
+                        <h2 class="text-2xl font-semibold mb-6 text-shadow-glow">健康决策·智能预警</h2>
+                        <div class="mb-6">
+                            <p class="text-gray-400 text-sm mb-2">核心服务覆盖</p>
+                            <p class="text-xl text-titleBlue">6类敏感人群 · 12类污染物</p>
+                        </div>
+                        <p class="text-gray-400 text-sm">点击定制敏感人群，获取个性化防护方案</p>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 板块4：溯源看板·成因解析 - 动态搜索图标 -->
+            <a href="./source-tracking.html" class="block">
+                <div class="relative bg-semiBlue/80 p-8 card-glow card-hover card-outline h-full overflow-hidden transition-all duration-500 hover:scale-[1.02]">
+                    <!-- 流程图骨架背景 -->
+                    <div class="absolute inset-0 opacity-20 flex items-center justify-center">
+                        <div class="flex items-center gap-2">
+                            <div class="w-16 h-16 rounded-lg skeleton-line"></div>
+                            <i class="fa fa-arrow-right text-titleBlue"></i>
+                            <div class="w-16 h-16 rounded-lg skeleton-line"></div>
+                            <i class="fa fa-arrow-right text-titleBlue"></i>
+                            <div class="w-16 h-16 rounded-lg skeleton-line"></div>
+                        </div>
+                    </div>
+                    <!-- 核心内容 -->
+                    <div class="relative z-10 text-center">
+                        <div class="mb-6 flex justify-center animate-spin-slow">
+                            <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="11" cy="11" r="8" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <animate attributeName="r" values="8;9;8" dur="3s" repeatCount="indefinite"/>
+                                </circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <h2 class="text-2xl font-semibold mb-6 text-shadow-glow">溯源看板·成因解析</h2>
+                        <div class="grid grid-cols-2 gap-2 mb-6 justify-center max-w-xs mx-auto">
+                            <span class="px-2 py-1 bg-titleBlue/10 rounded text-titleBlue text-sm">工业</span>
+                            <span class="px-2 py-1 bg-titleBlue/10 rounded text-titleBlue text-sm">机动车</span>
+                            <span class="px-2 py-1 bg-titleBlue/10 rounded text-titleBlue text-sm">扬尘</span>
+                            <span class="px-2 py-1 bg-titleBlue/10 rounded text-titleBlue text-sm">燃煤</span>
+                        </div>
+                        <p class="text-gray-400 text-sm">点击查看污染源贡献占比及流转关系</p>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 板块5：全国历年数据一览 - 动态历史图标 -->
+            <a href="./historical-data.html" class="block">
+                <div class="relative bg-semiBlue/80 p-8 card-glow card-hover card-outline h-full overflow-hidden transition-all duration-500 hover:scale-[1.02]">
+                    <!-- 时间轴光效背景 -->
+                    <div class="absolute inset-0 flex items-center justify-center opacity-20">
+                        <div class="w-full h-2 bg-semiBlue rounded-full relative">
+                            <div class="absolute h-2 bg-titleBlue rounded-full animate-flow" style="width: 80%;"></div>
+                            <div class="absolute top-1/2 -translate-y-1/2 left-0 w-4 h-4 rounded-full bg-titleBlue animate-pulse-slow"></div>
+                            <div class="absolute top-1/2 -translate-y-1/2 right-0 w-4 h-4 rounded-full bg-titleBlue animate-pulse-slow"></div>
+                        </div>
+                    </div>
+                    <!-- 核心内容 -->
+                    <div class="relative z-10 text-center">
+                        <div class="mb-6 flex justify-center animate-breath">
+                            <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M12 8v8l4 2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <animate attributeName="stroke-dasharray" values="10;15;10" dur="2s" repeatCount="indefinite"/>
+                                </path>
+                            </svg>
+                        </div>
+                        <h2 class="text-2xl font-semibold mb-6 text-shadow-glow">全国历年数据一览</h2>
+                        <div class="mb-6">
+                            <p class="text-gray-400 text-sm mb-2">数据时间跨度</p>
+                            <p class="text-xl text-titleBlue">2015 - 2025</p>
+                            <p class="text-gray-400 text-sm mt-4 mb-2">PM2.5年均值下降</p>
+                            <p class="text-3xl text-titleBlue dynamic-number" data-target="42">0<span class="text-xl">%</span></p>
+                        </div>
+                        <p class="text-gray-400 text-sm">点击查看完整历年趋势及同比分析</p>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 板块6：重点城市空气质量排名 - 动态奖杯图标 -->
+            <a href="./city-ranking.html" class="block">
+                <div class="relative bg-semiBlue/80 p-8 card-glow card-hover card-outline h-full overflow-hidden transition-all duration-500 hover:scale-[1.02]">
+                    <!-- 排名骨架背景 -->
+                    <div class="absolute inset-0 opacity-20 flex flex-col gap-2 justify-center px-8">
+                        <div class="skeleton-line h-6 w-full rounded"></div>
+                        <div class="skeleton-line h-6 w-full rounded"></div>
+                        <div class="skeleton-line h-6 w-full rounded"></div>
+                    </div>
+                    <!-- 核心内容 -->
+                    <div class="relative z-10 text-center">
+                        <div class="mb-6 flex justify-center animate-bounce-slow">
+                            <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M19 4H5c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-7 14h-2v-2h2v2zm0-4h-2V8h2v6z" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M12 10v4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <animate attributeName="stroke-opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite"/>
+                                </path>
+                                <polygon points="10,8 12,4 14,8" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <animate attributeName="points" values="10,8 12,4 14,8;10,7 12,3 14,7;10,8 12,4 14,8" dur="2s" repeatCount="indefinite"/>
+                                </polygon>
+                            </svg>
+                        </div>
+                        <h2 class="text-2xl font-semibold mb-6 text-shadow-glow">重点城市空气质量排名</h2>
+                        <div class="mb-6 grid grid-cols-2 gap-4 max-w-xs mx-auto">
+                            <div>
+                                <p class="text-gray-400 text-sm mb-2">优质城市TOP3</p>
+                                <p class="text-titleBlue text-base">拉萨 · 海口 · 舟山</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-400 text-sm mb-2">需关注城市TOP3</p>
+                                <p class="text-orange-400 text-base">邢台 · 邯郸 · 石家庄</p>
+                            </div>
+                        </div>
+                        <p class="text-gray-400 text-sm">点击查看完整排名及升降榜</p>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 板块7：数据下载·报告生成 - 动态下载图标 -->
+            <a href="./data-download.html" class="block">
+                <div class="relative bg-semiBlue/80 p-8 card-glow card-hover card-outline h-full overflow-hidden transition-all duration-500 hover:scale-[1.02]">
+                    <!-- 下载图标背景 -->
+                    <div class="absolute inset-0 flex items-center justify-center opacity-20">
+                        <i class="fa fa-download text-titleBlue text-8xl animate-pulse-slow opacity-20"></i>
+                    </div>
+                    <!-- 核心内容 -->
+                    <div class="relative z-10 text-center">
+                        <div class="mb-6 flex justify-center animate-breath">
+                            <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M12 11v6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <animate attributeName="stroke-dasharray" values="6;8;6" dur="2s" repeatCount="indefinite"/>
+                                </path>
+                                <path d="M9 14l3 3 3-3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <animate attributeName="stroke-opacity" values="0.5;1;0.5" dur="2s" repeatCount="indefinite"/>
+                                </path>
+                            </svg>
+                        </div>
+                        <h2 class="text-2xl font-semibold mb-6 text-shadow-glow">数据下载·报告生成</h2>
+                        <div class="mb-6">
+                            <p class="text-gray-400 text-sm mb-2">支持数据格式</p>
+                            <p class="text-xl text-titleBlue">Excel · CSV · JSON</p>
+                        </div>
+                        <p class="text-gray-400 text-sm">点击下载标准化数据及生成分析报告</p>
+                    </div>
+                </div>
+            </a>
+
+            <!-- 板块8：关于平台·数据说明 - 动态信息图标 -->
+            <a href="./about.html" class="block">
+                <div class="relative bg-semiBlue/80 p-8 card-glow card-hover card-outline h-full overflow-hidden transition-all duration-500 hover:scale-[1.02]">
+                    <!-- 信息图标背景 -->
+                    <div class="absolute inset-0 flex items-center justify-center opacity-20">
+                        <i class="fa fa-info-circle text-titleBlue text-8xl animate-pulse-slow opacity-20"></i>
+                    </div>
+                    <!-- 核心内容 -->
+                    <div class="relative z-10 text-center">
+                        <div class="mb-6 flex justify-center animate-breath">
+                            <svg class="icon-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="12" cy="12" r="10" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <animate attributeName="r" values="10;11;10" dur="3s" repeatCount="indefinite"/>
+                                </circle>
+                                <line x1="12" y1="16" x2="12" y2="12" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                                <line x1="12" y1="8" x2="12.01" y2="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <h2 class="text-2xl font-semibold mb-6 text-shadow-glow">关于平台·数据说明</h2>
+                        <div class="mb-6">
+                            <p class="text-gray-400 text-sm mb-2">数据来源</p>
+                            <p class="text-xl text-titleBlue">生态环境部公开数据</p>
+                        </div>
+                        <p class="text-gray-400 text-sm">点击查看数据采集标准及平台说明</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- 新增：联系我们板块 -->
+        <div class="mt-16 bg-semiBlue/80 p-8 card-glow card-outline rounded-lg">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-semibold text-titleBlue text-shadow-glow mb-4">联系我们</h2>
+                <p class="text-gray-400 max-w-2xl mx-auto">如果您对平台有任何建议、问题反馈或合作意向，欢迎通过以下方式联系我们</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                <div class="p-4 transition-all duration-300 hover:bg-titleBlue/5 rounded-lg">
+                    <i class="fa fa-envelope text-titleBlue text-4xl mb-4"></i>
+                    <h3 class="text-xl font-medium mb-2">邮箱联系</h3>
+                    <p class="text-gray-300"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ec8d859e888d988dac89948d819c8089c28f8381">2162573057@qq.com</a></p>
+                </div>
+                <div class="p-4 transition-all duration-300 hover:bg-titleBlue/5 rounded-lg">
+                    <i class="fa fa-phone text-titleBlue text-4xl mb-4"></i>
+                    <h3 class="text-xl font-medium mb-2">电话咨询</h3>
+                    <p class="text-gray-300">13880854529</p>
+                </div>
+                <div class="p-4 transition-all duration-300 hover:bg-titleBlue/5 rounded-lg">
+                    <i class="fa fa-weixin text-titleBlue text-4xl mb-4"></i>
+                    <h3 class="text-xl font-medium mb-2">微信交流</h3>
+                    <p class="text-gray-300">He-July_23-Lion</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 页脚 -->
+        <footer class="mt-20 text-center text-gray-500 text-sm">
+            <p>空气质量数据可视化平台 © 2026 计算机设计大赛参赛作品</p>
+            <p class="mt-2">数据更新时间：2025-04-12 实时更新</p>
+        </footer>
+    </div>
+
+    <!-- 脚本 -->
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+        // 初始化粒子背景
+        particlesJS('particles-js', {
+            "particles": {
+                "number": {
+                    "value": 80,
+                    "density": {
+                        "enable": true,
+                        "value_area": 800
+                    }
+                },
+                "color": {
+                    "value": "#50D1B2" // 匹配新标题色
+                },
+                "shape": {
+                    "type": "circle"
+                },
+                "opacity": {
+                    "value": 0.5,
+                    "random": true
+                },
+                "size": {
+                    "value": 3,
+                    "random": true
+                },
+                "line_linked": {
+                    "enable": true,
+                    "distance": 150,
+                    "color": "#4CC9F0",
+                    "opacity": 0.2,
+                    "width": 1
+                },
+                "move": {
+                    "enable": true,
+                    "speed": 1,
+                    "direction": "none",
+                    "random": true,
+                    "straight": false,
+                    "out_mode": "out",
+                    "bounce": false,
+                    "attract": {
+                        "enable": true,
+                        "rotateX": 600,
+                        "rotateY": 1200
+                    }
+                }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": {
+                    "onhover": {
+                        "enable": true,
+                        "mode": "grab"
+                    },
+                    "onclick": {
+                        "enable": true,
+                        "mode": "push"
+                    },
+                    "resize": true
+                },
+                "modes": {
+                    "grab": {
+                        "distance": 140,
+                        "line_linked": {
+                            "opacity": 0.5
+                        }
+                    },
+                    "push": {
+                        "particles_nb": 4
+                    }
+                }
+            },
+            "retina_detect": true
+        });
+
+        // 动态数字滚动效果
+        document.querySelectorAll('.dynamic-number').forEach(el => {
+            const target = parseInt(el.dataset.target);
+            let current = 0;
+            const step = Math.ceil(target / 30);
+            const timer = setInterval(() => {
+                current += step;
+                if (current >= target) {
+                    current = target;
+                    clearInterval(timer);
+                }
+                el.textContent = current;
+            }, 50);
+        });
+
+        // 滚动时粒子背景颜色渐变
+        window.addEventListener('scroll', function() {
+            const scrollPercent = Math.min(window.scrollY / (document.body.scrollHeight - window.innerHeight), 1);
+            const hue = scrollPercent * 30;
+            document.getElementById('particles-js').style.filter = `hue-rotate(${hue}deg)`;
+        });
+
+        // 板块淡入动画
+        document.addEventListener('DOMContentLoaded', function() {
+            const cards = document.querySelectorAll('.card-hover');
+            cards.forEach((card, index) => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                    card.style.opacity = '1';
+                    card.style.transform = 'translateY(0)';
+                }, 100 * index);
+            });
+        });
+    </script>
+</body>
+</html>

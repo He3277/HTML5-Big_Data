@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+<script src="https://fastly.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="https://fastly.jsdelivr.net/npm/echarts@5/map/js/china.js"></script>
+
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        darkBg: '#0A192F',
+        semiBlue: '#112240',
+        lightBlue: '#64FFDA',
+        secondaryBlue: '#4CC9F0',
+        titleBlue: '#50D1B2',
+      },
+      animation: {
+        'glow': 'glow 2s ease-in-out infinite alternate',
+        'flow': 'flow 15s linear infinite',
+        'spin-slow': 'spin 10s linear infinite',
+        'breath': 'breath 3s ease-in-out infinite alternate',
+        'float': 'float 6s ease-in-out infinite',
+      },
+      keyframes: {
+        glow: {
+          '0%': { textShadow: '0 0 2px #50D1B2, 0 0 4px #50D1B2' },
+          '100%': { textShadow: '0 0 6px #50D1B2, 0 0 14px #4CC9F0' },
+        },
+        flow: {
+          '0%': { backgroundPosition: '0% 50%' },
+          '100%': { backgroundPosition: '200% 50%' },
+        },
+        breath: {
+          '0%': { transform: 'scale(0.96)' },
+          '100%': { transform: 'scale(1.04)' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-10px)' },
+        }
+      }
+    }
+  }
+}
+</script>
+
+
+<style type="text/tailwindcss">
+@layer utilities{
+  .card-glow{ box-shadow: 0 0 15px rgba(80,209,178,.10), 0 0 30px rgba(76,201,240,.06); }
+  .card-outline{ border-radius: 16px 4px 16px 4px; border:1px solid rgba(80,209,178,.22); position:relative; overflow:hidden; }
+  .card-outline::after{ content:''; position:absolute; top:0; right:0; width:40px; height:40px; border-bottom:2px solid rgba(80,209,178,.28); border-left:2px solid rgba(80,209,178,.28); border-radius:0 0 0 12px; }
+  .card-outline::before{ content:''; position:absolute; bottom:0; left:0; width:40px; height:40px; border-top:2px solid rgba(80,209,178,.28); border-right:2px solid rgba(80,209,178,.28); border-radius:0 12px 0 0; }
+  .scanline{
+    background: linear-gradient(180deg, transparent 0%, rgba(80,209,178,.08) 45%, transparent 70%);
+    background-size: 100% 160%;
+    animation: flow 10s linear infinite;
+    mix-blend-mode: screen;
+  }
+  .glass{ background: rgba(17,34,64,.72); backdrop-filter: blur(10px); }
+  .btn-chip{ @apply px-3 py-1 rounded-full text-sm border border-titleBlue/30 text-titleBlue hover:bg-titleBlue/10 transition; }
+}
+</style>
+<style>
+  body{ background:#0A192F; overflow-x:hidden; }
+  #particles-js{ position:fixed; inset:0; z-index:0; }
+  .container{ position:relative; z-index:1; }
+  .neon-border{ border:1px solid rgba(80,209,178,.20); box-shadow: inset 0 0 20px rgba(80,209,178,.08); }
+  .grid-bg{
+    background-image: linear-gradient(rgba(76,201,240,.08) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(76,201,240,.08) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: radial-gradient(circle at 50% 0%, black 0%, transparent 70%);
+  }
+</style>
+
+
+<title>数据下载·报告生成</title>
+</head>
+<body class="text-white font-sans">
+<div id="particles-js"></div>
+<div class="container mx-auto px-4 py-8 md:py-12">
+  <div class="flex items-center justify-between gap-4 mb-8">
+    <a href="./index.html" class="inline-flex items-center gap-2 text-titleBlue hover:text-secondaryBlue transition">
+      <i class="fa fa-chevron-left"></i><span>返回导航</span>
+    </a>
+    
+  </div>
+
+  <header class="mb-8 md:mb-10">
+    <h1 class="text-[clamp(1.8rem,4vw,3rem)] font-bold text-titleBlue animate-glow">数据下载·报告生成</h1>
+    <p class="text-gray-300 mt-3 max-w-4xl leading-relaxed">拟真下载体验：格式选择、进度条、前端生成文件与报告HTML。配合预览图表与表格，让用户感知“数据可带走、结论可分享”。</p>
+  </header>
+
+  
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+  <section class="xl:col-span-7 card-outline glass card-glow p-4 md:p-6 relative overflow-hidden">
+    <div class="absolute inset-0 grid-bg opacity-60 pointer-events-none"></div>
+    <div class="relative flex items-center justify-between mb-4">
+      <h2 class="text-lg md:text-xl font-semibold">数据下载 · 报告生成</h2>
+      <div class="flex gap-2">
+        <button id="btn-gen" class="btn-chip"><i class="fa fa-database mr-1"></i>生成样例数据</button>
+        <button id="btn-report" class="btn-chip"><i class="fa fa-file-text-o mr-1"></i>生成报告页</button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="p-4 rounded-lg neon-border">
+        <p class="text-sm font-medium mb-2">下载配置</p>
+        <div class="space-y-3 text-sm">
+          <div class="flex items-center justify-between">
+            <span class="text-gray-300">数据范围</span>
+            <select id="range" class="bg-semiBlue/70 border border-titleBlue/20 rounded px-2 py-1 outline-none">
+              <option value="24">最近24小时</option>
+              <option value="168">最近7天</option>
+              <option value="720">最近30天</option>
+            </select>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-gray-300">指标字段</span>
+            <select id="fields" class="bg-semiBlue/70 border border-titleBlue/20 rounded px-2 py-1 outline-none">
+              <option value="basic">AQI/PM2.5/O₃</option>
+              <option value="full">全字段（含气象）</option>
+            </select>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-gray-300">导出格式</span>
+            <div class="flex gap-2">
+              <button class="btn-chip fmt" data-f="csv">CSV</button>
+              <button class="btn-chip fmt" data-f="json">JSON</button>
+              <button class="btn-chip fmt" data-f="xlsx">Excel(模拟)</button>
+            </div>
+          </div>
+
+          <div class="mt-2">
+            <p class="text-xs text-gray-400 mb-2">下载进度（动态）</p>
+            <div class="w-full h-3 rounded-full bg-white/5 overflow-hidden neon-border">
+              <div id="prog" class="h-3 w-0 bg-titleBlue/40"></div>
+            </div>
+            <div class="flex justify-between text-xs text-gray-400 mt-1">
+              <span>0%</span><span id="progTxt">等待</span><span>100%</span>
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <button id="btn-download" class="w-full py-2 rounded-lg border border-titleBlue/30 text-titleBlue hover:bg-titleBlue/10 transition">
+              <i class="fa fa-download mr-2"></i>下载数据文件
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-4 rounded-lg neon-border">
+        <p class="text-sm font-medium mb-2">预览图表（会随数据重生成）</p>
+        <div id="preview" class="w-full h-[360px]"></div>
+      </div>
+
+      <div class="p-4 rounded-lg neon-border md:col-span-2">
+        <div class="flex items-center justify-between">
+          <p class="text-sm font-medium">数据预览（前10行）</p>
+          <span class="text-xs text-gray-400">点击“生成样例数据”更新</span>
+        </div>
+        <div class="mt-3 overflow-auto max-h-[260px] neon-border rounded-lg">
+          <table class="min-w-full text-sm">
+            <thead class="sticky top-0 bg-semiBlue/90">
+              <tr class="text-gray-300">
+                <th class="text-left px-3 py-2">时间</th>
+                <th class="text-left px-3 py-2">AQI</th>
+                <th class="text-left px-3 py-2">PM2.5</th>
+                <th class="text-left px-3 py-2">O₃</th>
+                <th class="text-left px-3 py-2 hidden md:table-cell">风速</th>
+                <th class="text-left px-3 py-2 hidden md:table-cell">湿度</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="xl:col-span-5 card-outline glass card-glow p-4 md:p-6 relative overflow-hidden">
+    <div class="absolute inset-0 scanline opacity-40 pointer-events-none"></div>
+    <div class="relative">
+      <h2 class="text-lg md:text-xl font-semibold">报告生成区</h2>
+      <p class="text-gray-300 text-sm mt-2">点击“生成报告页”将从当前数据中提取摘要，生成一个可下载的HTML报告（前端生成）。</p>
+
+      <div class="mt-4 p-4 rounded-lg neon-border">
+        <p class="text-sm font-medium mb-2">报告摘要</p>
+        <ul class="text-sm text-gray-200 space-y-2" id="reportSummary"></ul>
+      </div>
+
+      <div class="mt-4 p-4 rounded-lg neon-border">
+        <p class="text-sm font-medium mb-2">交互示例</p>
+        <ul class="text-sm text-gray-200 space-y-2 list-disc list-inside">
+          <li>自动生成数据文件并触发下载</li>
+          <li>“进度条 + Toast”拟真下载体验</li>
+          <li>从数据中提取摘要并生成可分享报告</li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+</div>
+
+
+  <footer class="mt-12 text-center text-gray-500 text-sm">
+    <p>清穹智析 — 空气质量大数据可视化平台</p>
+  </footer>
+</div>
+
+
+<script>
+particlesJS('particles-js', {
+  particles:{
+    number:{value:70,density:{enable:true,value_area:800}},
+    color:{value:'#50D1B2'},
+    shape:{type:'circle'},
+    opacity:{value:0.5,random:true},
+    size:{value:3,random:true},
+    line_linked:{enable:true,distance:150,color:'#4CC9F0',opacity:0.18,width:1},
+    move:{enable:true,speed:1,direction:'none',random:true,straight:false,out_mode:'out',bounce:false,attract:{enable:true,rotateX:600,rotateY:1200}}
+  },
+  interactivity:{
+    detect_on:'canvas',
+    events:{onhover:{enable:true,mode:'grab'},onclick:{enable:true,mode:'push'},resize:true},
+    modes:{grab:{distance:140,line_linked:{opacity:0.55}},push:{particles_nb:4}}
+  },
+  retina_detect:true
+});
+
+window.addEventListener('scroll', () => {
+  const scrollPercent = Math.min(window.scrollY / (document.body.scrollHeight - window.innerHeight), 1);
+  const hue = scrollPercent * 28;
+  document.getElementById('particles-js').style.filter = `hue-rotate(${hue}deg)`;
+});
+</script>
+
+
+<script>
+const preview = echarts.init(document.getElementById('preview'));
+let dataset = [];
+let format='csv';
+
+function genData(){
+  const hours = +document.getElementById('range').value;
+  const full = document.getElementById('fields').value === 'full';
+  const now = Date.now();
+  dataset = Array.from({length:hours},(_,i)=>{
+    const t = new Date(now - (hours-1-i)*3600*1000);
+    const aqi = Math.round(40 + Math.random()*160);
+    const pm = Math.round(10 + aqi*0.55 + Math.random()*10);
+    const o3 = Math.round(20 + aqi*0.35 + Math.random()*12);
+    const ws = +(0.5 + Math.random()*6.5).toFixed(2);
+    const rh = Math.round(30 + Math.random()*60);
+    const row = {time: t.toISOString().slice(0,19).replace('T',' '), aqi, pm25: pm, o3};
+    if(full){ row.wind = ws; row.humidity = rh; }
+    else { row.wind = ws; row.humidity = rh; } // keep for preview
+    return row;
+  });
+  renderTable();
+  renderPreview();
+  renderReportSummary();
+  toast(`已生成 ${hours} 条样例数据`);
+}
+
+function renderPreview(){
+  const x = dataset.slice(-48).map(d=>d.time.slice(5,16));
+  const a = dataset.slice(-48).map(d=>d.aqi);
+  const p = dataset.slice(-48).map(d=>d.pm25);
+  preview.setOption({
+    tooltip:{trigger:'axis'},
+    legend:{textStyle:{color:'#cbd5e1'}},
+    grid:{left:45,right:20,top:35,bottom:45},
+    xAxis:{type:'category',data:x,axisLabel:{color:'#94a3b8',interval:7},axisLine:{lineStyle:{color:'rgba(76,201,240,.25)'}}},
+    yAxis:{type:'value',axisLabel:{color:'#94a3b8'},splitLine:{lineStyle:{color:'rgba(76,201,240,.12)'}}},
+    series:[
+      {name:'AQI', type:'line', smooth:true, showSymbol:false, data:a, areaStyle:{opacity:0.14}},
+      {name:'PM2.5', type:'bar', data:p, barWidth:10, itemStyle:{borderRadius:[4,4,0,0]}, opacity:0.9}
+    ]
+  }, true);
+}
+
+function renderTable(){
+  const tb = document.getElementById('tbody');
+  tb.innerHTML='';
+  dataset.slice(0,10).forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.className='border-t border-titleBlue/10 hover:bg-titleBlue/5 transition';
+    tr.innerHTML = `
+      <td class="px-3 py-2 text-gray-200">${r.time}</td>
+      <td class="px-3 py-2 text-titleBlue font-semibold">${r.aqi}</td>
+      <td class="px-3 py-2 text-gray-200">${r.pm25}</td>
+      <td class="px-3 py-2 text-gray-200">${r.o3}</td>
+      <td class="px-3 py-2 text-gray-200 hidden md:table-cell">${r.wind}</td>
+      <td class="px-3 py-2 text-gray-200 hidden md:table-cell">${r.humidity}%</td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+
+function setFormat(f){
+  format=f;
+  document.querySelectorAll('.fmt').forEach(b=>{
+    b.classList.toggle('bg-titleBlue/10', b.dataset.f===f);
+  });
+  toast(`已选择格式：${f.toUpperCase()}`);
+}
+document.querySelectorAll('.fmt').forEach(b=> b.addEventListener('click', ()=> setFormat(b.dataset.f)));
+
+function simulateProgress(cb){
+  const bar = document.getElementById('prog');
+  const txt = document.getElementById('progTxt');
+  let p=0;
+  txt.textContent='准备中...';
+  const timer=setInterval(()=>{
+    p += Math.random()*18;
+    if(p>=100){ p=100; clearInterval(timer); txt.textContent='完成'; cb(); }
+    bar.style.width = p+'%';
+    txt.textContent = `下载中... ${Math.round(p)}%`;
+  }, 120);
+}
+
+function downloadBlob(name, content, mime){
+  const blob = new Blob([content], {type:mime});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 800);
+}
+
+function toCSV(rows){
+  const keys = Object.keys(rows[0] || {});
+  const head = keys.join(',');
+  const lines = rows.map(r=> keys.map(k=> String(r[k]).replaceAll(',',';')).join(','));
+  return [head, ...lines].join('\n');
+}
+
+document.getElementById('btn-download').addEventListener('click', ()=>{
+  if(dataset.length===0) genData();
+  simulateProgress(()=>{
+    const ts = new Date().toISOString().slice(0,10);
+    if(format==='json'){
+      downloadBlob(`air_quality_${ts}.json`, JSON.stringify(dataset,null,2), 'application/json;charset=utf-8');
+    }else if(format==='xlsx'){
+      // demo: output csv but name as xlsx to mimic (real xlsx needs library)
+      downloadBlob(`air_quality_${ts}.xlsx`, toCSV(dataset), 'text/csv;charset=utf-8');
+    }else{
+      downloadBlob(`air_quality_${ts}.csv`, toCSV(dataset), 'text/csv;charset=utf-8');
+    }
+    toast('已触发下载（前端生成文件）');
+  });
+});
+
+document.getElementById('btn-gen').addEventListener('click', genData);
+document.getElementById('range').addEventListener('change', genData);
+document.getElementById('fields').addEventListener('change', genData);
+
+function renderReportSummary(){
+  const ul = document.getElementById('reportSummary');
+  ul.innerHTML='';
+  if(!dataset.length) return;
+  const aqi = dataset.map(d=>d.aqi);
+  const pm = dataset.map(d=>d.pm25);
+  const avg = arr => Math.round(arr.reduce((s,x)=>s+x,0)/arr.length);
+  const max = arr => Math.max(...arr);
+  const min = arr => Math.min(...arr);
+  const items = [
+    `样本量：${dataset.length} 条`,
+    `AQI 均值：${avg(aqi)}（最小 ${min(aqi)} / 最大 ${max(aqi)}）`,
+    `PM2.5 均值：${avg(pm)}（最小 ${min(pm)} / 最大 ${max(pm)}）`,
+    `高值时段：${dataset.slice(-24).sort((a,b)=>b.aqi-a.aqi)[0].time}（AQI ${max(aqi)})`,
+  ];
+  items.forEach(t=>{
+    const li=document.createElement('li');
+    li.className='p-3 rounded-lg neon-border bg-titleBlue/5';
+    li.textContent=t;
+    ul.appendChild(li);
+  });
+}
+
+document.getElementById('btn-report').addEventListener('click', ()=>{
+  if(dataset.length===0) genData();
+  const ts = new Date().toISOString().slice(0,19).replaceAll(':','-');
+  const aqi = dataset.map(d=>d.aqi);
+  const avg = Math.round(aqi.reduce((s,x)=>s+x,0)/aqi.length);
+  const maxv = Math.max(...aqi);
+  const html = `
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>空气质量分析报告</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:#0A192F; color:#e5e7eb; margin:0;}
+  header{padding:28px 18px; max-width:980px; margin:0 auto;}
+  .card{background:rgba(17,34,64,.72); border:1px solid rgba(80,209,178,.22); border-radius:16px; padding:16px; margin:12px 0;}
+  h1{color:#50D1B2;margin:0 0 6px}
+  .kpi{display:flex;gap:12px;flex-wrap:wrap}
+  .kpi div{flex:1; min-width:170px}
+  .kpi b{color:#50D1B2;font-size:28px}
+  footer{opacity:.7; font-size:12px; padding:18px; text-align:center}
+</style></head><body>
+<header>
+  <h1>空气质量分析报告</h1>
+  <div style="opacity:.8">生成时间：${ts.replaceAll('-',':').replace('T',' ')}</div>
+  <div class="card kpi">
+    <div><div style="opacity:.7">样本量</div><b>${dataset.length}</b></div>
+    <div><div style="opacity:.7">AQI 均值</div><b>${avg}</b></div>
+    <div><div style="opacity:.7">AQI 最大值</div><b>${maxv}</b></div>
+  </div>
+  <div class="card">
+    <div style="font-weight:700;margin-bottom:8px;color:#50D1B2">摘要</div>
+    <div style="line-height:1.7;opacity:.92">
+      本报告基于前端样例数据生成，用于展示“数据下载/报告生成”交互体验。你可以将该报告作为分享页或二次加工模板。
+    </div>
+  </div>
+</header>
+<footer>空气质量数据可视化平台 · 报告页（前端生成示例）</footer>
+</body></html>`;
+  downloadBlob(`report_${ts}.html`, html, 'text/html;charset=utf-8');
+  toast('已生成并下载报告HTML');
+});
+
+function toast(msg){
+  const el = document.createElement('div');
+  el.className = 'fixed top-4 right-4 z-[60] px-4 py-3 rounded-lg glass card-outline card-glow';
+  el.innerHTML = `<div class="text-titleBlue font-semibold mb-1">交互反馈</div><div class="text-sm text-gray-200">${msg}</div>`;
+  document.body.appendChild(el);
+  setTimeout(()=>{ el.style.transition='opacity .4s ease, transform .4s ease'; el.style.opacity='0'; el.style.transform='translateY(-10px)'; }, 1400);
+  setTimeout(()=> el.remove(), 1900);
+}
+
+setFormat('csv');
+genData();
+window.addEventListener('resize', ()=> preview.resize());
+</script>
+
+</body>
+</html>

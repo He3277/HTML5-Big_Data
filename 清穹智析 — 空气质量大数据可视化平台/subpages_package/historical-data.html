@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+<script src="https://fastly.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="https://fastly.jsdelivr.net/npm/echarts@5/map/js/china.js"></script>
+
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        darkBg: '#0A192F',
+        semiBlue: '#112240',
+        lightBlue: '#64FFDA',
+        secondaryBlue: '#4CC9F0',
+        titleBlue: '#50D1B2',
+      },
+      animation: {
+        'glow': 'glow 2s ease-in-out infinite alternate',
+        'flow': 'flow 15s linear infinite',
+        'spin-slow': 'spin 10s linear infinite',
+        'breath': 'breath 3s ease-in-out infinite alternate',
+        'float': 'float 6s ease-in-out infinite',
+      },
+      keyframes: {
+        glow: {
+          '0%': { textShadow: '0 0 2px #50D1B2, 0 0 4px #50D1B2' },
+          '100%': { textShadow: '0 0 6px #50D1B2, 0 0 14px #4CC9F0' },
+        },
+        flow: {
+          '0%': { backgroundPosition: '0% 50%' },
+          '100%': { backgroundPosition: '200% 50%' },
+        },
+        breath: {
+          '0%': { transform: 'scale(0.96)' },
+          '100%': { transform: 'scale(1.04)' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-10px)' },
+        }
+      }
+    }
+  }
+}
+</script>
+
+
+<style type="text/tailwindcss">
+@layer utilities{
+  .card-glow{ box-shadow: 0 0 15px rgba(80,209,178,.10), 0 0 30px rgba(76,201,240,.06); }
+  .card-outline{ border-radius: 16px 4px 16px 4px; border:1px solid rgba(80,209,178,.22); position:relative; overflow:hidden; }
+  .card-outline::after{ content:''; position:absolute; top:0; right:0; width:40px; height:40px; border-bottom:2px solid rgba(80,209,178,.28); border-left:2px solid rgba(80,209,178,.28); border-radius:0 0 0 12px; }
+  .card-outline::before{ content:''; position:absolute; bottom:0; left:0; width:40px; height:40px; border-top:2px solid rgba(80,209,178,.28); border-right:2px solid rgba(80,209,178,.28); border-radius:0 12px 0 0; }
+  .scanline{
+    background: linear-gradient(180deg, transparent 0%, rgba(80,209,178,.08) 45%, transparent 70%);
+    background-size: 100% 160%;
+    animation: flow 10s linear infinite;
+    mix-blend-mode: screen;
+  }
+  .glass{ background: rgba(17,34,64,.72); backdrop-filter: blur(10px); }
+  .btn-chip{ @apply px-3 py-1 rounded-full text-sm border border-titleBlue/30 text-titleBlue hover:bg-titleBlue/10 transition; }
+}
+</style>
+<style>
+  body{ background:#0A192F; overflow-x:hidden; }
+  #particles-js{ position:fixed; inset:0; z-index:0; }
+  .container{ position:relative; z-index:1; }
+  .neon-border{ border:1px solid rgba(80,209,178,.20); box-shadow: inset 0 0 20px rgba(80,209,178,.08); }
+  .grid-bg{
+    background-image: linear-gradient(rgba(76,201,240,.08) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(76,201,240,.08) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: radial-gradient(circle at 50% 0%, black 0%, transparent 70%);
+  }
+</style>
+
+
+<title>全国历年数据一览</title>
+</head>
+<body class="text-white font-sans">
+<div id="particles-js"></div>
+<div class="container mx-auto px-4 py-8 md:py-12">
+  <div class="flex items-center justify-between gap-4 mb-8">
+    <a href="./index.html" class="inline-flex items-center gap-2 text-titleBlue hover:text-secondaryBlue transition">
+      <i class="fa fa-chevron-left"></i><span>返回导航</span>
+    </a>
+    
+  </div>
+
+  <header class="mb-8 md:mb-10">
+    <h1 class="text-[clamp(1.8rem,4vw,3rem)] font-bold text-titleBlue animate-glow">全国历年数据一览</h1>
+    <p class="text-gray-300 mt-3 max-w-4xl leading-relaxed">时间轴驱动的历年趋势探索：折线（带缩放）、四季柱状对比、城市气泡分布。支持年份播放、气泡点击生成城市卡片，实现“看趋势→挑城市→做结论”。</p>
+  </header>
+
+  
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+  <section class="xl:col-span-9 card-outline glass card-glow p-4 md:p-6 relative overflow-hidden">
+    <div class="absolute inset-0 grid-bg opacity-60 pointer-events-none"></div>
+    <div class="relative flex flex-wrap items-center justify-between gap-3 mb-4">
+      <h2 class="text-lg md:text-xl font-semibold">全国历年趋势</h2>
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-gray-400">年份：</span>
+        <input id="year" type="range" min="2015" max="2025" value="2022" class="w-[220px]">
+        <span class="px-3 py-1 rounded-full text-xs border border-titleBlue/30 text-titleBlue" id="yearTag">2022</span>
+        <button id="btn-animate" class="btn-chip"><i class="fa fa-play-circle mr-1"></i>播放时间轴</button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 relative">
+      <div class="p-3 rounded-lg neon-border">
+        <p class="text-xs text-gray-400 mb-2">折线：AQI 年均值（含数据缩放）</p>
+        <div id="line" class="w-full h-[320px]"></div>
+      </div>
+      <div class="p-3 rounded-lg neon-border">
+        <p class="text-xs text-gray-400 mb-2">柱状：PM2.5 四季对比</p>
+        <div id="season" class="w-full h-[320px]"></div>
+      </div>
+      <div class="p-3 rounded-lg neon-border lg:col-span-2">
+        <p class="text-xs text-gray-400 mb-2">气泡：城市分布（AQI×PM2.5×人口）</p>
+        <div id="bubble" class="w-full h-[340px]"></div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="xl:col-span-3 card-outline glass card-glow p-4 md:p-6 relative overflow-hidden">
+    <div class="absolute inset-0 scanline opacity-40 pointer-events-none"></div>
+    <div class="relative">
+      <h2 class="text-lg md:text-xl font-semibold">年份解读</h2>
+      <p class="text-gray-300 text-sm mt-2">拖动年份滑块或播放时间轴，观察指标如何随时间变化；点击气泡可生成“城市卡片”。</p>
+
+      <div class="mt-4 p-4 rounded-lg neon-border">
+        <p class="text-sm font-medium">关键指标</p>
+        <div class="mt-3 space-y-2 text-sm">
+          <div class="flex items-center justify-between"><span class="text-gray-300">全国AQI均值</span><b id="k1" class="text-titleBlue">--</b></div>
+          <div class="flex items-center justify-between"><span class="text-gray-300">PM2.5均值</span><b id="k2" class="text-titleBlue">--</b></div>
+          <div class="flex items-center justify-between"><span class="text-gray-300">优良天数占比</span><b id="k3" class="text-titleBlue">--</b></div>
+        </div>
+      </div>
+
+      <div class="mt-4 p-4 rounded-lg neon-border">
+        <div class="flex items-center justify-between">
+          <p class="text-sm font-medium">城市卡片</p>
+          <button id="btn-clear" class="btn-chip"><i class="fa fa-trash mr-1"></i>清空</button>
+        </div>
+        <div id="cards" class="mt-3 space-y-3"></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+
+  <footer class="mt-12 text-center text-gray-500 text-sm">
+    <p>清穹智析 — 空气质量大数据可视化平台</p>
+  </footer>
+</div>
+
+
+<script>
+particlesJS('particles-js', {
+  particles:{
+    number:{value:70,density:{enable:true,value_area:800}},
+    color:{value:'#50D1B2'},
+    shape:{type:'circle'},
+    opacity:{value:0.5,random:true},
+    size:{value:3,random:true},
+    line_linked:{enable:true,distance:150,color:'#4CC9F0',opacity:0.18,width:1},
+    move:{enable:true,speed:1,direction:'none',random:true,straight:false,out_mode:'out',bounce:false,attract:{enable:true,rotateX:600,rotateY:1200}}
+  },
+  interactivity:{
+    detect_on:'canvas',
+    events:{onhover:{enable:true,mode:'grab'},onclick:{enable:true,mode:'push'},resize:true},
+    modes:{grab:{distance:140,line_linked:{opacity:0.55}},push:{particles_nb:4}}
+  },
+  retina_detect:true
+});
+
+window.addEventListener('scroll', () => {
+  const scrollPercent = Math.min(window.scrollY / (document.body.scrollHeight - window.innerHeight), 1);
+  const hue = scrollPercent * 28;
+  document.getElementById('particles-js').style.filter = `hue-rotate(${hue}deg)`;
+});
+</script>
+
+
+<script>
+const line = echarts.init(document.getElementById('line'));
+const season = echarts.init(document.getElementById('season'));
+const bubble = echarts.init(document.getElementById('bubble'));
+
+const years = Array.from({length:11},(_,i)=>2015+i);
+const baseAQI = years.map((y,i)=> Math.round(115 - i*4 + (Math.random()*8-4)));
+const basePM = years.map((y,i)=> Math.round(65 - i*2.5 + (Math.random()*6-3)));
+let currentYear = 2022;
+let play=null;
+
+function setKPIs(y){
+  const idx = years.indexOf(y);
+  const aqi = baseAQI[idx];
+  const pm = basePM[idx];
+  const good = Math.round(55 + (idx*2.3) + (Math.random()*6-3));
+  document.getElementById('k1').textContent = aqi;
+  document.getElementById('k2').textContent = pm;
+  document.getElementById('k3').textContent = `${Math.max(40, Math.min(92, good))}%`;
+}
+
+function renderLine(){
+  line.setOption({
+    tooltip:{trigger:'axis'},
+    grid:{left:45,right:20,top:25,bottom:55},
+    xAxis:{type:'category',data:years,axisLabel:{color:'#94a3b8'},axisLine:{lineStyle:{color:'rgba(76,201,240,.25)'}}},
+    yAxis:{type:'value',axisLabel:{color:'#94a3b8'},splitLine:{lineStyle:{color:'rgba(76,201,240,.12)'}}},
+    dataZoom:[{type:'inside'},{type:'slider',height:18, bottom:15}],
+    series:[{
+      name:'AQI', type:'line', smooth:true, showSymbol:false,
+      data: baseAQI,
+      areaStyle:{opacity:0.18},
+      markPoint:{data:[{type:'min',name:'最优'},{type:'max',name:'最差'}]}
+    }]
+  }, true);
+
+  // highlight selected year
+  const idx = years.indexOf(currentYear);
+  line.dispatchAction({type:'showTip', seriesIndex:0, dataIndex:idx});
+}
+
+function renderSeason(y){
+  const seasons=['春','夏','秋','冬'];
+  const idx = years.indexOf(y);
+  const base = basePM[idx];
+  const vals = seasons.map((s,i)=> Math.round(base + (i===1?-10:0) + (Math.random()*14-7)));
+  season.setOption({
+    tooltip:{trigger:'axis'},
+    grid:{left:45,right:20,top:20,bottom:40},
+    xAxis:{type:'category',data:seasons,axisLabel:{color:'#94a3b8'},axisLine:{lineStyle:{color:'rgba(76,201,240,.25)'}}},
+    yAxis:{type:'value',axisLabel:{color:'#94a3b8'},splitLine:{lineStyle:{color:'rgba(76,201,240,.12)'}}},
+    series:[{type:'bar', data:vals, barWidth:'55%', itemStyle:{borderRadius:[8,8,0,0]}}]
+  }, true);
+}
+
+const cities=['北京','上海','广州','深圳','成都','重庆','西安','武汉','杭州','南京','长沙','郑州','青岛','厦门','昆明','拉萨'];
+function genBubble(y){
+  const idx = years.indexOf(y);
+  const aqiBase = baseAQI[idx];
+  const pmBase = basePM[idx];
+  return cities.map(c=>{
+    const pop = Math.round(300 + Math.random()*1800); // 万
+    const aqi = Math.round(aqiBase + (Math.random()*40-20));
+    const pm = Math.max(10, Math.round(pmBase + (Math.random()*30-15)));
+    return {name:c, value:[aqi, pm, pop]};
+  });
+}
+
+function renderBubble(y){
+  const data = genBubble(y);
+  bubble.setOption({
+    tooltip:{trigger:'item', formatter:p=>`${p.name}<br/>AQI：${p.value[0]}<br/>PM2.5：${p.value[1]}<br/>人口：${p.value[2]}万`},
+    grid:{left:55,right:20,top:15,bottom:40},
+    xAxis:{name:'AQI',nameTextStyle:{color:'#94a3b8'},axisLabel:{color:'#94a3b8'},splitLine:{lineStyle:{color:'rgba(76,201,240,.10)'}}},
+    yAxis:{name:'PM2.5',nameTextStyle:{color:'#94a3b8'},axisLabel:{color:'#94a3b8'},splitLine:{lineStyle:{color:'rgba(76,201,240,.10)'}}},
+    series:[{
+      type:'scatter',
+      data,
+      symbolSize: v=> Math.max(10, Math.min(55, v[2]/40)),
+      emphasis:{focus:'series'}
+    }]
+  }, true);
+}
+
+function addCityCard(name, v){
+  const wrap = document.getElementById('cards');
+  const el = document.createElement('div');
+  el.className='p-4 rounded-lg neon-border bg-titleBlue/5';
+  el.innerHTML = `
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <p class="text-titleBlue font-semibold">${name} · ${currentYear}</p>
+        <p class="text-sm text-gray-200 mt-1">AQI <b class="text-titleBlue">${v[0]}</b> ，PM2.5 <b class="text-titleBlue">${v[1]}</b> ，人口约 ${v[2]}万</p>
+        <p class="text-xs text-gray-400 mt-2">提示：可将城市卡片用于生成报告或对比分析。</p>
+      </div>
+      <button class="btn-chip btn-del"><i class="fa fa-times"></i></button>
+    </div>
+  `;
+  el.querySelector('.btn-del').addEventListener('click', ()=> el.remove());
+  wrap.prepend(el);
+  while(wrap.children.length>6) wrap.lastChild.remove();
+}
+
+bubble.on('click', (p)=>{
+  addCityCard(p.name, p.value);
+});
+
+document.getElementById('btn-clear').addEventListener('click', ()=>{ document.getElementById('cards').innerHTML=''; });
+
+function setYear(y){
+  currentYear = y;
+  document.getElementById('yearTag').textContent = y;
+  document.getElementById('year').value = y;
+  setKPIs(y);
+  renderLine();
+  renderSeason(y);
+  renderBubble(y);
+}
+
+document.getElementById('year').addEventListener('input', (e)=> setYear(+e.target.value));
+
+document.getElementById('btn-animate').addEventListener('click', (e)=>{
+  if(play){
+    clearInterval(play); play=null;
+    e.currentTarget.innerHTML = '<i class="fa fa-play-circle mr-1"></i>播放时间轴';
+    return;
+  }
+  e.currentTarget.innerHTML = '<i class="fa fa-pause-circle mr-1"></i>暂停播放';
+  let idx = years.indexOf(currentYear);
+  play = setInterval(()=>{
+    idx = (idx+1) % years.length;
+    setYear(years[idx]);
+  }, 1200);
+});
+
+setYear(currentYear);
+
+window.addEventListener('resize', ()=>{ line.resize(); season.resize(); bubble.resize(); });
+</script>
+
+</body>
+</html>

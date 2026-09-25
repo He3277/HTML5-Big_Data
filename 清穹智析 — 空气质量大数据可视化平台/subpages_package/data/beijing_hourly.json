@@ -1,0 +1,14 @@
+{
+  "city": "北京",
+  "aqi": 55,
+  "level": "良",
+  "primary_pollutant": "PM<b class='b_num'>10</b>,PM<b class='b_num'>2.5</b>",
+  "pm25": "39",
+  "pm10": "59",
+  "o3": null,
+  "no2": "25",
+  "so2": "3",
+  "co": "0.7",
+  "datetime": "2026-02-27 21:00:00",
+  "update_time": "2026-02-27 22:21:45"
+}

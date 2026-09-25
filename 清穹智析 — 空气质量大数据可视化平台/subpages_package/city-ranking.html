@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+<script src="https://fastly.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="https://fastly.jsdelivr.net/npm/echarts@5/map/js/china.js"></script>
+
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        darkBg: '#0A192F',
+        semiBlue: '#112240',
+        lightBlue: '#64FFDA',
+        secondaryBlue: '#4CC9F0',
+        titleBlue: '#50D1B2',
+      },
+      animation: {
+        'glow': 'glow 2s ease-in-out infinite alternate',
+        'flow': 'flow 15s linear infinite',
+        'spin-slow': 'spin 10s linear infinite',
+        'breath': 'breath 3s ease-in-out infinite alternate',
+        'float': 'float 6s ease-in-out infinite',
+      },
+      keyframes: {
+        glow: {
+          '0%': { textShadow: '0 0 2px #50D1B2, 0 0 4px #50D1B2' },
+          '100%': { textShadow: '0 0 6px #50D1B2, 0 0 14px #4CC9F0' },
+        },
+        flow: {
+          '0%': { backgroundPosition: '0% 50%' },
+          '100%': { backgroundPosition: '200% 50%' },
+        },
+        breath: {
+          '0%': { transform: 'scale(0.96)' },
+          '100%': { transform: 'scale(1.04)' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-10px)' },
+        }
+      }
+    }
+  }
+}
+</script>
+
+
+<style type="text/tailwindcss">
+@layer utilities{
+  .card-glow{ box-shadow: 0 0 15px rgba(80,209,178,.10), 0 0 30px rgba(76,201,240,.06); }
+  .card-outline{ border-radius: 16px 4px 16px 4px; border:1px solid rgba(80,209,178,.22); position:relative; overflow:hidden; }
+  .card-outline::after{ content:''; position:absolute; top:0; right:0; width:40px; height:40px; border-bottom:2px solid rgba(80,209,178,.28); border-left:2px solid rgba(80,209,178,.28); border-radius:0 0 0 12px; }
+  .card-outline::before{ content:''; position:absolute; bottom:0; left:0; width:40px; height:40px; border-top:2px solid rgba(80,209,178,.28); border-right:2px solid rgba(80,209,178,.28); border-radius:0 12px 0 0; }
+  .scanline{
+    background: linear-gradient(180deg, transparent 0%, rgba(80,209,178,.08) 45%, transparent 70%);
+    background-size: 100% 160%;
+    animation: flow 10s linear infinite;
+    mix-blend-mode: screen;
+  }
+  .glass{ background: rgba(17,34,64,.72); backdrop-filter: blur(10px); }
+  .btn-chip{ @apply px-3 py-1 rounded-full text-sm border border-titleBlue/30 text-titleBlue hover:bg-titleBlue/10 transition; }
+}
+</style>
+<style>
+  body{ background:#0A192F; overflow-x:hidden; }
+  #particles-js{ position:fixed; inset:0; z-index:0; }
+  .container{ position:relative; z-index:1; }
+  .neon-border{ border:1px solid rgba(80,209,178,.20); box-shadow: inset 0 0 20px rgba(80,209,178,.08); }
+  .grid-bg{
+    background-image: linear-gradient(rgba(76,201,240,.08) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(76,201,240,.08) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: radial-gradient(circle at 50% 0%, black 0%, transparent 70%);
+  }
+</style>
+
+
+<title>重点城市空气质量排名</title>
+</head>
+<body class="text-white font-sans">
+<div id="particles-js"></div>
+<div class="container mx-auto px-4 py-8 md:py-12">
+  <div class="flex items-center justify-between gap-4 mb-8">
+    <a href="./index.html" class="inline-flex items-center gap-2 text-titleBlue hover:text-secondaryBlue transition">
+      <i class="fa fa-chevron-left"></i><span>返回导航</span>
+    </a>
+  </div>
+
+  <header class="mb-8 md:mb-10">
+    <h1 class="text-[clamp(1.8rem,4vw,3rem)] font-bold text-titleBlue animate-glow">重点城市空气质量排名</h1>
+    <p class="text-gray-300 mt-3 max-w-4xl leading-relaxed">以可点击条形排名为入口，联动雷达画像与24小时火花线。支持优质榜/关注榜切换与排序字段切换，强化“操作即探索”。</p>
+  </header>
+
+  
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+  <section class="xl:col-span-8 card-outline glass card-glow p-4 md:p-6 relative overflow-hidden">
+    <div class="absolute inset-0 grid-bg opacity-60 pointer-events-none"></div>
+    <div class="relative flex flex-wrap items-center justify-between gap-3 mb-4">
+      <h2 class="text-lg md:text-xl font-semibold">重点城市空气质量排名</h2>
+      <div class="flex flex-wrap gap-2">
+        <button id="btn-good" class="btn-chip"><i class="fa fa-thumbs-up mr-1"></i>优质榜</button>
+        <button id="btn-bad" class="btn-chip"><i class="fa fa-exclamation-triangle mr-1"></i>关注榜</button>
+        <button id="btn-sort" class="btn-chip"><i class="fa fa-sort mr-1"></i>切换排序</button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 relative">
+      <div class="p-3 rounded-lg neon-border">
+        <p class="text-xs text-gray-400 mb-2">条形排名（可点击）</p>
+        <div id="rankBar" class="w-full h-[420px]"></div>
+      </div>
+      <div class="p-3 rounded-lg neon-border">
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-xs text-gray-400">Top/Bottom 指标雷达</p>
+          <span class="text-xs text-gray-400">点击条形 → 更新雷达</span>
+        </div>
+        <div id="rankRadar" class="w-full h-[420px]"></div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="xl:col-span-4 card-outline glass card-glow p-4 md:p-6 relative overflow-hidden">
+    <div class="absolute inset-0 scanline opacity-40 pointer-events-none"></div>
+    <div class="relative">
+      <h2 class="text-lg md:text-xl font-semibold">城市详情</h2>
+      <p class="text-gray-300 text-sm mt-2">点击左侧排名条形即可生成城市详情与“火花线”，模拟展示城市日内波动。</p>
+
+      <div class="mt-4 p-4 rounded-lg neon-border">
+        <div class="flex items-center justify-between">
+          <p class="text-sm font-medium">当前城市</p>
+          <span id="cityTag" class="px-3 py-1 rounded-full text-xs border border-titleBlue/30 text-titleBlue">未选择</span>
+        </div>
+        <div class="mt-3 grid grid-cols-3 gap-3">
+          <div class="p-3 rounded-lg neon-border">
+            <p class="text-xs text-gray-400">AQI</p>
+            <p id="c1" class="text-2xl text-titleBlue font-semibold">--</p>
+          </div>
+          <div class="p-3 rounded-lg neon-border">
+            <p class="text-xs text-gray-400">PM2.5</p>
+            <p id="c2" class="text-2xl text-titleBlue font-semibold">--</p>
+          </div>
+          <div class="p-3 rounded-lg neon-border">
+            <p class="text-xs text-gray-400">O₃</p>
+            <p id="c3" class="text-2xl text-titleBlue font-semibold">--</p>
+          </div>
+        </div>
+        <div class="mt-4">
+          <p class="text-xs text-gray-400 mb-2">24小时火花线</p>
+          <div id="spark" class="w-full h-[180px]"></div>
+        </div>
+      </div>
+
+      <div class="mt-4 p-4 rounded-lg neon-border">
+        <p class="text-sm font-medium mb-2">交互提示</p>
+        <ul class="text-sm text-gray-200 space-y-2 list-disc list-inside">
+          <li>优质榜：AQI越低越靠前</li>
+          <li>关注榜：AQI越高越靠前</li>
+          <li>排序按钮：切换“按AQI/按PM2.5”</li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+</div>
+
+
+  <footer class="mt-12 text-center text-gray-500 text-sm">
+    <p>清穹智析 — 空气质量大数据可视化平台</p>
+  </footer>
+</div>
+
+
+<script>
+particlesJS('particles-js', {
+  particles:{
+    number:{value:70,density:{enable:true,value_area:800}},
+    color:{value:'#50D1B2'},
+    shape:{type:'circle'},
+    opacity:{value:0.5,random:true},
+    size:{value:3,random:true},
+    line_linked:{enable:true,distance:150,color:'#4CC9F0',opacity:0.18,width:1},
+    move:{enable:true,speed:1,direction:'none',random:true,straight:false,out_mode:'out',bounce:false,attract:{enable:true,rotateX:600,rotateY:1200}}
+  },
+  interactivity:{
+    detect_on:'canvas',
+    events:{onhover:{enable:true,mode:'grab'},onclick:{enable:true,mode:'push'},resize:true},
+    modes:{grab:{distance:140,line_linked:{opacity:0.55}},push:{particles_nb:4}}
+  },
+  retina_detect:true
+});
+
+window.addEventListener('scroll', () => {
+  const scrollPercent = Math.min(window.scrollY / (document.body.scrollHeight - window.innerHeight), 1);
+  const hue = scrollPercent * 28;
+  document.getElementById('particles-js').style.filter = `hue-rotate(${hue}deg)`;
+});
+</script>
+
+
+<script>
+const rankBar = echarts.init(document.getElementById('rankBar'));
+const rankRadar = echarts.init(document.getElementById('rankRadar'));
+const spark = echarts.init(document.getElementById('spark'));
+
+const cityPool = ['拉萨','海口','舟山','厦门','昆明','深圳','广州','杭州','南京','武汉','成都','重庆','西安','郑州','石家庄','邯郸','邢台','唐山','济南','太原'];
+let mode='good'; // good/bad
+let sortKey='aqi'; // aqi/pm
+let data = genCities();
+
+function genCities(){
+  return cityPool.map(n=>{
+    const aqi = Math.round(35 + Math.random()*190);
+    const pm = Math.round(12 + aqi*0.55 + Math.random()*12);
+    const o3 = Math.round(20 + aqi*0.35 + Math.random()*15);
+    return {name:n, aqi, pm, o3, no2:Math.round(10+Math.random()*60), co:Math.round(5+Math.random()*35)};
+  });
+}
+
+function getList(){
+  const arr=[...data];
+  arr.sort((a,b)=>{
+    const ka = sortKey==='aqi'? a.aqi : a.pm;
+    const kb = sortKey==='aqi'? b.aqi : b.pm;
+    return mode==='good' ? ka-kb : kb-ka;
+  });
+  return arr.slice(0,12);
+}
+
+function renderRank(){
+  const list = getList();
+  const names = list.map(x=>x.name).reverse();
+  const vals = list.map(x=> sortKey==='aqi'? x.aqi : x.pm).reverse();
+  rankBar.setOption({
+    tooltip:{trigger:'item', formatter:p=>`${p.name}<br/>${sortKey.toUpperCase()}：${p.value}`},
+    grid:{left:90,right:25,top:20,bottom:25},
+    xAxis:{type:'value',axisLabel:{color:'#94a3b8'},splitLine:{lineStyle:{color:'rgba(76,201,240,.10)'}}},
+    yAxis:{type:'category',data:names,axisLabel:{color:'#cbd5e1'},axisLine:{lineStyle:{color:'rgba(76,201,240,.25)'}}},
+    series:[{
+      type:'bar',
+      data: vals,
+      barWidth:16,
+      itemStyle:{borderRadius:8},
+      label:{show:true, position:'right', color:'#cbd5e1'}
+    }]
+  }, true);
+
+  // default select first
+  setTimeout(()=>{
+    const first = list[0];
+    if(first) selectCity(first.name);
+  }, 0);
+}
+
+function radarOption(city){
+  const c = data.find(x=>x.name===city) || data[0];
+  const inds=[{name:'AQI',max:250},{name:'PM2.5',max:200},{name:'O₃',max:200},{name:'NO₂',max:120},{name:'CO',max:60}];
+  return {
+    tooltip:{},
+    radar:{
+      indicator:inds,
+      axisName:{color:'#cbd5e1'},
+      splitLine:{lineStyle:{color:'rgba(76,201,240,.15)'}},
+      splitArea:{areaStyle:{color:['rgba(17,34,64,.0)','rgba(17,34,64,.35)']}},
+      axisLine:{lineStyle:{color:'rgba(76,201,240,.18)'}}
+    },
+    series:[{type:'radar', data:[{value:[c.aqi,c.pm,c.o3,c.no2,c.co], name:c.name}], areaStyle:{opacity:0.18}, lineStyle:{width:2}}]
+  };
+}
+
+function renderSpark(city){
+  const c = data.find(x=>x.name===city);
+  const hours = Array.from({length:24},(_,i)=> i);
+  const base = c ? c.aqi : 90;
+  const series = hours.map(i=> Math.max(10, Math.round(base + 25*Math.sin(i/3)+(Math.random()*18-9))));
+  spark.setOption({
+    grid:{left:35,right:15,top:15,bottom:25},
+    xAxis:{type:'category',data:hours,axisLabel:{color:'#94a3b8',interval:5},axisLine:{lineStyle:{color:'rgba(76,201,240,.25)'}}},
+    yAxis:{type:'value',axisLabel:{color:'#94a3b8'},splitLine:{lineStyle:{color:'rgba(76,201,240,.12)'}}},
+    tooltip:{trigger:'axis'},
+    series:[{type:'line',data:series,smooth:true,showSymbol:false,areaStyle:{opacity:0.18},lineStyle:{width:2}}]
+  }, true);
+}
+
+function selectCity(city){
+  const c = data.find(x=>x.name===city);
+  if(!c) return;
+  document.getElementById('cityTag').textContent = city;
+  document.getElementById('c1').textContent = c.aqi;
+  document.getElementById('c2').textContent = c.pm;
+  document.getElementById('c3').textContent = c.o3;
+  rankRadar.setOption(radarOption(city), true);
+  renderSpark(city);
+  toast(`已选择城市：${city}`);
+}
+
+rankBar.on('click', (p)=> selectCity(p.name));
+
+document.getElementById('btn-good').addEventListener('click', ()=>{ mode='good'; renderRank(); toast('已切换：优质榜'); });
+document.getElementById('btn-bad').addEventListener('click', ()=>{ mode='bad'; renderRank(); toast('已切换：关注榜'); });
+document.getElementById('btn-sort').addEventListener('click', ()=>{
+  sortKey = (sortKey==='aqi') ? 'pm' : 'aqi';
+  renderRank();
+  toast(`已切换排序字段：${sortKey.toUpperCase()}`);
+});
+
+function toast(msg){
+  const el = document.createElement('div');
+  el.className = 'fixed top-4 right-4 z-[60] px-4 py-3 rounded-lg glass card-outline card-glow';
+  el.innerHTML = `<div class="text-titleBlue font-semibold mb-1">交互反馈</div><div class="text-sm text-gray-200">${msg}</div>`;
+  document.body.appendChild(el);
+  setTimeout(()=>{ el.style.transition='opacity .4s ease, transform .4s ease'; el.style.opacity='0'; el.style.transform='translateY(-10px)'; }, 1400);
+  setTimeout(()=> el.remove(), 1900);
+}
+
+renderRank();
+rankRadar.setOption(radarOption(cityPool[0]), true);
+window.addEventListener('resize', ()=>{ rankBar.resize(); rankRadar.resize(); spark.resize(); });
+</script>
+
+</body>
+</html>

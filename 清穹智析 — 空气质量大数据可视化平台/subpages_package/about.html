@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+<script src="https://fastly.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="https://fastly.jsdelivr.net/npm/echarts@5/map/js/china.js"></script>
+
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        darkBg: '#0A192F',
+        semiBlue: '#112240',
+        lightBlue: '#64FFDA',
+        secondaryBlue: '#4CC9F0',
+        titleBlue: '#50D1B2',
+      },
+      animation: {
+        'glow': 'glow 2s ease-in-out infinite alternate',
+        'flow': 'flow 15s linear infinite',
+        'spin-slow': 'spin 10s linear infinite',
+        'breath': 'breath 3s ease-in-out infinite alternate',
+        'float': 'float 6s ease-in-out infinite',
+      },
+      keyframes: {
+        glow: {
+          '0%': { textShadow: '0 0 2px #50D1B2, 0 0 4px #50D1B2' },
+          '100%': { textShadow: '0 0 6px #50D1B2, 0 0 14px #4CC9F0' },
+        },
+        flow: {
+          '0%': { backgroundPosition: '0% 50%' },
+          '100%': { backgroundPosition: '200% 50%' },
+        },
+        breath: {
+          '0%': { transform: 'scale(0.96)' },
+          '100%': { transform: 'scale(1.04)' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-10px)' },
+        }
+      }
+    }
+  }
+}
+</script>
+
+<style type="text/tailwindcss">
+@layer utilities{
+  .card-glow{ box-shadow: 0 0 15px rgba(80,209,178,.10), 0 0 30px rgba(76,201,240,.06); }
+  .card-outline{ border-radius: 16px 4px 16px 4px; border:1px solid rgba(80,209,178,.22); position:relative; overflow:hidden; }
+  .card-outline::after{ content:''; position:absolute; top:0; right:0; width:40px; height:40px; border-bottom:2px solid rgba(80,209,178,.28); border-left:2px solid rgba(80,209,178,.28); border-radius:0 0 0 12px; }
+  .card-outline::before{ content:''; position:absolute; bottom:0; left:0; width:40px; height:40px; border-top:2px solid rgba(80,209,178,.28); border-right:2px solid rgba(80,209,178,.28); border-radius:0 12px 0 0; }
+  .scanline{
+    background: linear-gradient(180deg, transparent 0%, rgba(80,209,178,.08) 45%, transparent 70%);
+    background-size: 100% 160%;
+    animation: flow 10s linear infinite;
+    mix-blend-mode: screen;
+  }
+  .glass{ background: rgba(17,34,64,.72); backdrop-filter: blur(10px); }
+  .btn-chip{ @apply px-3 py-1 rounded-full text-sm border border-titleBlue/30 text-titleBlue hover:bg-titleBlue/10 transition; }
+  .btn-chip-active{ @apply bg-titleBlue/10; }
+  .input-like{ @apply w-full bg-semiBlue/70 border border-titleBlue/20 rounded px-3 py-2 text-sm outline-none; }
+}
+</style>
+
+<style>
+  body{ background:#0A192F; overflow-x:hidden; }
+  #particles-js{ position:fixed; inset:0; z-index:0; }
+  .container{ position:relative; z-index:1; }
+  .neon-border{ border:1px solid rgba(80,209,178,.20); box-shadow: inset 0 0 20px rgba(80,209,178,.08); }
+  .grid-bg{
+    background-image: linear-gradient(rgba(76,201,240,.08) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(76,201,240,.08) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: radial-gradient(circle at 50% 0%, black 0%, transparent 70%);
+  }
+  .muted{ color: rgba(226,232,240,.72); }
+</style>
+
+<title>关于平台·数据说明</title>
+</head>
+
+<body class="text-white font-sans">
+<div id="particles-js"></div>
+
+<div class="container mx-auto px-4 py-8 md:py-12">
+  <div class="flex items-center justify-between gap-4 mb-8">
+    <a href="./index.html" class="inline-flex items-center gap-2 text-titleBlue hover:text-secondaryBlue transition">
+      <i class="fa fa-chevron-left"></i><span>返回导航</span>
+    </a>
+    
+  </div>
+
+  <header class="mb-6 md:mb-8">
+    <h1 class="text-[clamp(1.8rem,4vw,3rem)] font-bold text-titleBlue animate-glow">关于平台·数据说明</h1>
+    <p class="text-gray-300 mt-3 max-w-5xl leading-relaxed">
+      说明页也保持“可视化仪表盘”体验：KPI总览、趋势探索、风险预警、质量控制、反馈统计与路线图，
+      让用户不仅“看说明”，还能“直接探索与参与”。
+    </p>
+  </header>
+
+  <!-- KPI 总览 -->
+  <section class="card-outline glass card-glow p-4 md:p-6 relative overflow-hidden mb-6">
+    <div class="absolute inset-0 grid-bg opacity-60 pointer-events-none"></div>
+    <div class="relative">
+      <div class="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h2 class="text-lg md:text-xl font-semibold">平台 KPI 总览</h2>
+          <p class="text-sm muted mt-1">点击 KPI 可作为下方趋势默认指标（模拟联动）。</p>
+        </div>
+        <div class="flex items-center gap-2 text-xs text-gray-400">
+          <span class="px-2 py-1 rounded-full border border-titleBlue/20">实时联动</span>
+          <span class="px-2 py-1 rounded-full border border-titleBlue/20">可解释</span>
+          <span class="px-2 py-1 rounded-full border border-titleBlue/20">闭环反馈</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4 mt-4">
+        <button class="p-4 rounded-lg neon-border bg-titleBlue/5 hover:bg-titleBlue/10 transition text-left kpi-btn" data-metric="AQI">
+          <div class="flex items-center justify-between">
+            <span class="text-titleBlue font-semibold">覆盖城市</span>
+            <i class="fa fa-map-o text-titleBlue/80"></i>
+          </div>
+          <div class="text-2xl font-bold mt-2" id="kpi-city">-</div>
+          <div class="text-xs muted mt-1">示例：省市级聚合</div>
+        </button>
+
+        <button class="p-4 rounded-lg neon-border bg-titleBlue/5 hover:bg-titleBlue/10 transition text-left kpi-btn" data-metric="PM2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-titleBlue font-semibold">监测站点</span>
+            <i class="fa fa-crosshairs text-titleBlue/80"></i>
+          </div>
+          <div class="text-2xl font-bold mt-2" id="kpi-site">-</div>
+          <div class="text-xs muted mt-1">示例：站点级可扩展</div>
+        </button>
+
+        <button class="p-4 rounded-lg neon-border bg-titleBlue/5 hover:bg-titleBlue/10 transition text-left kpi-btn" data-metric="O3">
+          <div class="flex items-center justify-between">
+            <span class="text-titleBlue font-semibold">更新频率</span>
+            <i class="fa fa-refresh text-titleBlue/80"></i>
+          </div>
+          <div class="text-2xl font-bold mt-2" id="kpi-freq">-</div>
+          <div class="text-xs muted mt-1">示例：小时级</div>
+        </button>
+
+        <button class="p-4 rounded-lg neon-border bg-titleBlue/5 hover:bg-titleBlue/10 transition text-left kpi-btn" data-metric="NO2">
+          <div class="flex items-center justify-between">
+            <span class="text-titleBlue font-semibold">数据延迟</span>
+            <i class="fa fa-clock-o text-titleBlue/80"></i>
+          </div>
+          <div class="text-2xl font-bold mt-2" id="kpi-lag">-</div>
+          <div class="text-xs muted mt-1">示例：分钟级</div>
+        </button>
+
+        <button class="p-4 rounded-lg neon-border bg-titleBlue/5 hover:bg-titleBlue/10 transition text-left kpi-btn" data-metric="PM10">
+          <div class="flex items-center justify-between">
+            <span class="text-titleBlue font-semibold">本月活跃</span>
+            <i class="fa fa-bolt text-titleBlue/80"></i>
+          </div>
+          <div class="text-2xl font-bold mt-2" id="kpi-active">-</div>
+          <div class="text-xs muted mt-1">示例：访问/互动</div>
+        </button>
+
+        <button class="p-4 rounded-lg neon-border bg-titleBlue/5 hover:bg-titleBlue/10 transition text-left kpi-btn" data-metric="SO2">
+          <div class="flex items-center justify-between">
+            <span class="text-titleBlue font-semibold">预警命中率</span>
+            <i class="fa fa-shield text-titleBlue/80"></i>
+          </div>
+          <div class="text-2xl font-bold mt-2" id="kpi-hit">-</div>
+          <div class="text-xs muted mt-1">示例：规则/模型</div>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 主内容区 -->
+  <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+
+
+    <!-- 左侧：平台介绍 + 地图线路 -->
+<section class="xl:col-span-7 card-outline glass card-glow p-4 md:p-6 relative overflow-hidden">
+  <div class="absolute inset-0 grid-bg opacity-60 pointer-events-none"></div>
+  <div class="relative">
+    <h1 class="text-lg md:text-xl font-semibold mb-4">平台介绍</h1>
+    <p class="text-gray-300 leading-relaxed">
+      本平台是一个面向环境治理与公众健康的空气质量大数据可视化系统，整合全国34个省级行政区、338个地级以上城市的实时及历史空气质量数据，通过时空分布、趋势对比、健康预警、污染源溯源、数据报告生成等多维度分析，为政府决策、科研分析、公众防护提供一站式数据洞察服务。
+      <span class="text-titleBlue font-semibold">可解释</span>、<span class="text-titleBlue font-semibold">可探索</span> 与 <span class="text-titleBlue font-semibold">可参与</span>。
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5">
+      <div class="p-4 rounded-lg neon-border bg-titleBlue/5">
+        <p class="text-titleBlue font-semibold">数据维度</p>
+        <p class="text-sm text-gray-200 mt-2">AQI/污染物/气象/政策/人群等多维融合</p>
+      </div>
+      <div class="p-4 rounded-lg neon-border bg-titleBlue/5">
+        <p class="text-titleBlue font-semibold">交互策略</p>
+        <p class="text-sm text-gray-200 mt-2">点击筛选、联动高亮、时间轴、生成卡片</p>
+      </div>
+      <div class="p-4 rounded-lg neon-border bg-titleBlue/5">
+        <p class="text-titleBlue font-semibold">视觉风格</p>
+        <p class="text-sm text-gray-200 mt-2">粒子背景、扫描线、霓虹描边、动态过渡</p>
+      </div>
+    </div>
+
+    <!-- 应用介绍区块，增加上边距 -->
+    <div class="mt-8">
+      <h1 class="text-lg md:text-xl font-semibold mb-4">应用介绍</h1>
+      <p class="text-gray-300 leading-relaxed">
+        <span class="text-titleBlue font-semibold">政府治理：</span> 支持省-市-站点三级下钻，提供跨区域污染传输链路分析、极端污染峰值识别、政策成效量化评估（如历年AQI改善轨迹），助力精准治污与应急决策。
+      </p>
+      <p class="text-gray-300 leading-relaxed mt-2">
+        <span class="text-titleBlue font-semibold">公众健康：</span>针对儿童、孕妇、哮喘患者、老人、户外工作者等6类敏感人群，提供个性化健康预警与防护建议，实时推送未来6小时污染风险。
+      </p>
+      <p class="text-gray-300 leading-relaxed mt-2">
+        <span class="text-titleBlue font-semibold">科研分析：</span>提供历年（2015-2025）趋势对比、季节构成分析、污染物相关性矩阵、气象因子散点图等工具，支持多城市雷达对比与箱线图分布探索。
+      </p>
+      <p class="text-gray-300 leading-relaxed mt-2">
+        <span class="text-titleBlue font-semibold">数据开放：</span>支持CSV/JSON/Excel格式数据下载，一键生成HTML分析报告，满足第三方二次开发与学术引用需求。
+      </p>
+    </div>
+
+    <!-- 市场分析区块，增加上边距 -->
+    <div class="mt-8">
+      <h1 class="text-lg md:text-xl font-semibold mb-4">市场分析</h1>
+      <p class="text-gray-300 leading-relaxed">
+        <span class="text-titleBlue font-semibold">政策驱动：</span> 国家“十四五”生态环境监测规划要求强化大气污染协同控制，各地环保部门亟需可视化决策工具，市场规模预计超百亿。
+      </p>
+      <p class="text-gray-300 leading-relaxed mt-2">
+        <span class="text-titleBlue font-semibold">公众需求：</span>空气质量与健康关联度日益受关注，敏感人群精准预警、出行建议等个人服务市场潜力巨大。
+      </p>
+      <p class="text-gray-300 leading-relaxed mt-2">
+        <span class="text-titleBlue font-semibold">技术趋势：</span>大数据+GIS可视化+AI预测成为环境监测主流，本平台采用的ECharts+粒子动态背景+实时联动方案具备技术先进性与高复用性。
+      </p>
+      <p class="text-gray-300 leading-relaxed mt-2">
+        <span class="text-titleBlue font-semibold">竞争差异化：</span>现有产品多为静态报表或单一地图，本平台融合桑基图、旭日图、关系图、雷达图、热力图、堆积柱状图等十余种交互图表，并首创“点击柱子生成建议卡”“模拟污染过程”“时间轴播放”等沉浸式操作，显著提升用户粘性。
+      </p>
+		<p class="text-gray-300 leading-relaxed mt-2">
+    <span class="text-titleBlue font-semibold">国际拓展机遇：</span>随着“一带一路”倡议推进，东南亚、中亚等发展中国家面临类似空气污染挑战，本平台的可视化架构与多语言适配能力可快速输出至海外市场，形成技术输出+数据服务的国际化产品线。
+  </p>
+  <p class="text-gray-300 leading-relaxed mt-2">
+    <span class="text-titleBlue font-semibold">商业模式多元：</span>平台支持SaaS订阅（政府/企业版）、API数据接口服务、定制化大屏开发、研究报告售卖等盈利模式，覆盖B端、G端、C端多层次用户，具备可持续造血能力。
+  </p>
+    </div>
+
+    <!-- 数据来源区块，增加上边距 -->
+    <div class="mt-8">
+      <h1 class="text-lg md:text-xl font-semibold mb-4">数据来源</h1>
+      <p class="text-gray-300 leading-relaxed">
+        <span class="text-titleBlue font-semibold">中国环境监测总站（CNEMC）：</span>全国城市空气质量实时发布平台数据（AQI、PM2.5、PM10、O₃、NO₂、SO₂、CO）
+      </p>
+      <p class="text-gray-300 leading-relaxed mt-2">
+        <span class="text-titleBlue font-semibold">生态环境部：</span>历年环境状况公报、省级行政区划与城市名录
+      </p>
+      <p class="text-gray-300 leading-relaxed mt-2">
+        <span class="text-titleBlue font-semibold">国家统计局：</span>人口、GDP等辅助维度数据
+      </p>
+      <p class="text-gray-300 leading-relaxed mt-2">
+        <span class="text-titleBlue font-semibold">地理信息：</span>阿里云DataV GeoJSON（省级边界）、城市经纬度坐标
+      </p>
+    </div>
+
+    <!-- 预测数据区块，增加上边距 -->
+    <div class="mt-8">
+      <h1 class="text-lg md:text-xl font-semibold mb-4">预测数据</h1>
+      <p class="text-gray-300 leading-relaxed">
+        <span class="text-titleBlue font-semibold">时序预测模型：</span>基于历史24小时数据，利用移动平均+周期性修正生成未来6小时AQI趋势（前端模拟算法）。
+      </p>
+      <p class="text-gray-300 leading-relaxed mt-2">
+        <span class="text-titleBlue font-semibold">气象耦合：</span>接入风速、风向、湿度、温度等气象因子，通过线性回归/随机森林模型（示意）预测污染扩散路径。
+      </p>
+      <p class="text-gray-300 leading-relaxed mt-2">
+        <span class="text-titleBlue font-semibold">情景模拟：</span>支持“模拟一次污染过程”按钮，动态更新当前城市各项指标，用于应急预案演练。
+      </p>
+    </div>
+	  <div class="mt-8">
+      <h1 class="text-lg md:text-xl font-semibold mb-4">创新特色</h1>
+      <p class="text-gray-300 leading-relaxed">
+        <span class="text-titleBlue font-semibold">全维度交互联动：</span> 地图点击省份→右侧所有图表（桑基图、玫瑰图、旭日图、关系图）同步切换为该省真实城市数据；排名榜单点击城市→雷达图与火花线即时更新；柱状图点击→自动生成防护建议卡片。实现“一处操作，全域响应”。
+      </p>
+      <p class="text-gray-300 leading-relaxed mt-2">
+        <span class="text-titleBlue font-semibold">个性化健康预警引擎：</span>用户可选择人群类型（儿童/孕妇/哮喘/老人/户外工作者）和关注污染物（PM2.5/O₃/NO₂/SO₂），系统动态计算风险等级（低/中/高/极高）并输出针对性防护建议，支持阈值手动调节。
+      </p>
+      <p class="text-gray-300 leading-relaxed mt-2">
+        <span class="text-titleBlue font-semibold">时间轴叙事与动画：</span>历年趋势页面提供年份滑块+播放按钮，自动遍历2015-2025年数据，地图气泡大小随年份变化，直观呈现空气质量改善历程。
+      <p class="text-gray-300 leading-relaxed mt-2">
+        <span class="text-titleBlue font-semibold">数据溯源与质量控制可视化：</span>采用Sankey图展示“采集→清洗→校验→聚合→入库→服务”全链路，异常数据（缺测、重复、延迟）以条形图呈现，点击节点可查看环节说明，增强数据可信度。
+      </p>
+		  <p class="text-gray-300 leading-relaxed mt-2">
+        <span class="text-titleBlue font-semibold">智能报告生成：</span>基于当前筛选数据（时间范围、指标字段）自动计算统计摘要（均值、最值、高值时段），一键下载包含图表与结论的HTML报告，支持二次编辑与分享。
+      </p>
+		  <p class="text-gray-300 leading-relaxed mt-2">
+        <span class="text-titleBlue font-semibold">沉浸式视觉体验：</span>粒子背景随滚动色相渐变，卡片采用不规则圆角+霓虹描边+扫描线动画，动态SVG图标呼吸/旋转，兼顾科技感与信息层级清晰度。
+      </p>
+		  <p class="text-gray-300 leading-relaxed mt-2">
+        <span class="text-titleBlue font-semibold">完整省市地理覆盖：</span>内置全国所有地级市（含港澳台）名称库，通过哈希算法为每个城市生成稳定的模拟污染特征，确保交互演示时无空白区域。
+      </p>
+    </div>
+  </div>
+</section>
+
+    <!-- 右侧：数据说明/FAQ/反馈 -->
+    <aside class="xl:col-span-5 card-outline glass card-glow p-4 md:p-6 relative overflow-hidden">
+      <div class="absolute inset-0 scanline opacity-40 pointer-events-none"></div>
+      <div class="relative">
+        <h2 class="text-lg md:text-xl font-semibold">数据说明 & FAQ</h2>
+
+        <div class="mt-4 p-4 rounded-lg neon-border">
+          <p class="text-sm font-medium mb-2">数据来源说明（示例）</p>
+          <ul class="text-sm text-gray-200 space-y-2 list-disc list-inside">
+            <li>空气质量：公开监测数据（城市/站点）</li>
+            <li>气象要素：风速/风向/湿度/温度等（可选）</li>
+            <li>行政区划：省市边界与地理编码</li>
+            <li>所有页面当前使用“模拟数据”演示交互效果</li>
+          </ul>
+        </div>
+
+        <!-- 风险预警（右侧小仪表） -->
+        <div class="mt-4 p-4 rounded-lg neon-border">
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p class="text-sm font-medium">健康风险 & 预警模拟</p>
+              <p class="text-xs muted mt-1">切换人群阈值，仪表与提示联动（模拟）。</p>
+            </div>
+            <select id="crowd" class="bg-semiBlue/70 border border-titleBlue/20 rounded px-3 py-2 text-sm outline-none">
+              <option value="general">一般人群</option>
+              <option value="child">儿童</option>
+              <option value="elder">老人</option>
+              <option value="asthma">哮喘/敏感</option>
+            </select>
+          </div>
+          <div id="gauge" class="w-full h-[220px] mt-3"></div>
+          <div class="mt-2 text-sm">
+            <div class="flex items-center justify-between">
+              <span class="muted">当前建议</span>
+              <span class="text-titleBlue font-semibold" id="risk-level">-</span>
+            </div>
+            <p class="text-gray-200 mt-1 leading-relaxed" id="risk-tip">-</p>
+          </div>
+        </div>
+
+        <div class="mt-4 p-4 rounded-lg neon-border">
+          <p class="text-sm font-medium mb-2">FAQ（点击展开）</p>
+          <div class="space-y-2" id="faq"></div>
+        </div>
+
+        <!-- 反馈统计 -->
+        <div class="mt-4 p-4 rounded-lg neon-border">
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <p class="text-sm font-medium">反馈统计面板</p>
+              <p class="text-xs muted mt-1">提交反馈后自动刷新；点击类别可筛选记录。</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button class="btn-chip btn-filter" data-filter="all">全部</button>
+              <button class="btn-chip btn-filter" data-filter="建议">建议</button>
+              <button class="btn-chip btn-filter" data-filter="问题反馈">问题</button>
+              <button class="btn-chip btn-filter" data-filter="合作意向">合作</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+            <div id="fbPie" class="w-full h-[200px]"></div>
+            <div id="fbBar" class="w-full h-[200px]"></div>
+          </div>
+        </div>
+
+        <div class="mt-4 p-4 rounded-lg neon-border">
+          <div class="flex items-center justify-between">
+            <p class="text-sm font-medium">反馈表单（交互）</p>
+            <button id="btn-send" class="btn-chip"><i class="fa fa-paper-plane mr-1"></i>提交</button>
+          </div>
+          <div class="mt-3 space-y-3">
+            <input id="f1" class="input-like" placeholder="你的称呼（可选）">
+            <select id="f2" class="input-like">
+              <option>建议</option><option>问题反馈</option><option>合作意向</option>
+            </select>
+            <textarea id="f3" rows="4" class="input-like" placeholder="请输入内容..."></textarea>
+            <div class="text-xs text-gray-400">提交后会生成一条“反馈卡片”，并驱动上方统计图刷新。</div>
+          </div>
+        </div>
+
+        <div class="mt-4 p-4 rounded-lg neon-border">
+          <p class="text-sm font-medium mb-2">反馈记录</p>
+          <div id="feedback" class="space-y-3"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 趋势探索（大图表，强交互） -->
+    <section class="xl:col-span-8 card-outline glass card-glow p-4 md:p-6 relative overflow-hidden">
+      <div class="absolute inset-0 grid-bg opacity-40 pointer-events-none"></div>
+      <div class="relative">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h2 class="text-lg md:text-xl font-semibold">趋势探索（可筛选 / 可对比）</h2>
+            <p class="text-xs muted mt-1">选择城市/指标/时间范围；支持添加对比城市与缩放查看细节（模拟数据）。</p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <select id="city" class="bg-semiBlue/70 border border-titleBlue/20 rounded px-3 py-2 text-sm outline-none">
+              <option>北京</option><option>上海</option><option>广州</option><option>成都</option><option>乌鲁木齐</option><option>拉萨</option><option>香港</option>
+            </select>
+            <select id="metric" class="bg-semiBlue/70 border border-titleBlue/20 rounded px-3 py-2 text-sm outline-none">
+              <option>AQI</option><option>PM2.5</option><option>PM10</option><option>NO2</option><option>O3</option><option>SO2</option><option>CO</option>
+            </select>
+            <button class="btn-chip range-btn btn-chip-active" data-days="7">近7天</button>
+            <button class="btn-chip range-btn" data-days="30">近30天</button>
+            <button class="btn-chip range-btn" data-days="90">近90天</button>
+            <button id="btn-add-compare" class="btn-chip"><i class="fa fa-plus mr-1"></i>加一城</button>
+            <button id="btn-clear-compare" class="btn-chip"><i class="fa fa-eraser mr-1"></i>清对比</button>
+          </div>
+        </div>
+
+        <div class="mt-3 flex items-center gap-2 flex-wrap" id="compareChips"></div>
+        <div id="trend" class="w-full h-[420px] mt-3"></div>
+      </div>
+    </section>
+
+    <!-- 构成/来源（堆叠柱 + 环形） -->
+    <section class="xl:col-span-4 card-outline glass card-glow p-4 md:p-6 relative overflow-hidden">
+      <div class="absolute inset-0 scanline opacity-35 pointer-events-none"></div>
+      <div class="relative">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h2 class="text-lg md:text-xl font-semibold">污染物构成 & 来源</h2>
+            <p class="text-xs muted mt-1">构成项可点击高亮；季节切换模拟差异。</p>
+          </div>
+          <select id="season" class="bg-semiBlue/70 border border-titleBlue/20 rounded px-3 py-2 text-sm outline-none">
+            <option value="spring">春季</option>
+            <option value="summer">夏季</option>
+            <option value="autumn">秋季</option>
+            <option value="winter">冬季</option>
+          </select>
+        </div>
+        <div id="stack" class="w-full h-[220px] mt-3"></div>
+        <div id="donut" class="w-full h-[220px] mt-1"></div>
+      </div>
+    </section>
+
+    <!-- 质量控制（Sankey + 异常条形） -->
+    <section class="xl:col-span-8 card-outline glass card-glow p-4 md:p-6 relative overflow-hidden">
+      <div class="absolute inset-0 grid-bg opacity-35 pointer-events-none"></div>
+      <div class="relative">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h2 class="text-lg md:text-xl font-semibold">数据处理流程 & 质量控制（示意）</h2>
+            <p class="text-xs muted mt-1">点击节点查看说明；展示“从采集到服务”的可信链路。</p>
+          </div>
+          <button id="btn-qc" class="btn-chip"><i class="fa fa-random mr-1"></i>刷新示例</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+          <div class="p-3 rounded-lg neon-border">
+            <div id="sankey" class="w-full h-[320px]"></div>
+          </div>
+          <div class="p-3 rounded-lg neon-border">
+            <div id="anomaly" class="w-full h-[320px]"></div>
+          </div>
+        </div>
+
+        <div class="mt-3 text-sm text-gray-200 leading-relaxed" id="qc-desc">
+          点击上方流程节点，可快速了解该环节的作用、常见问题与平台应对策略（示意）。
+        </div>
+      </div>
+    </section>
+
+    <!-- 路线图（时间线可视化） -->
+    <section class="xl:col-span-4 card-outline glass card-glow p-4 md:p-6 relative overflow-hidden">
+      <div class="absolute inset-0 scanline opacity-35 pointer-events-none"></div>
+      <div class="relative">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h2 class="text-lg md:text-xl font-semibold">版本更新 & 路线图</h2>
+            <p class="text-xs muted mt-1">点击节点弹出细节（模拟）。</p>
+          </div>
+          <button id="btn-roadmap" class="btn-chip"><i class="fa fa-calendar mr-1"></i>刷新</button>
+        </div>
+        <div id="roadmap" class="w-full h-[360px] mt-3"></div>
+      </div>
+    </section>
+
+  </div>
+
+  <footer class="mt-12 text-center text-gray-500 text-sm">
+    <p>清穹智析 — 空气质量大数据可视化平台</p>
+  </footer>
+</div>
+
+<script>
+particlesJS('particles-js', {
+  particles:{
+    number:{value:70,density:{enable:true,value_area:800}},
+    color:{value:'#50D1B2'},
+    shape:{type:'circle'},
+    opacity:{value:0.5,random:true},
+    size:{value:3,random:true},
+    line_linked:{enable:true,distance:150,color:'#4CC9F0',opacity:0.18,width:1},
+    move:{enable:true,speed:1,direction:'none',random:true,straight:false,out_mode:'out',bounce:false,attract:{enable:true,rotateX:600,rotateY:1200}}
+  },
+  interactivity:{
+    detect_on:'canvas',
+    events:{onhover:{enable:true,mode:'grab'},onclick:{enable:true,mode:'push'},resize:true},
+    modes:{grab:{distance:140,line_linked:{opacity:0.55}},push:{particles_nb:4}}
+  },
+  retina_detect:true
+});
+
+window.addEventListener('scroll', () => {
+  const scrollPercent = Math.min(window.scrollY / (document.body.scrollHeight - window.innerHeight), 1);
+  const hue = scrollPercent * 28;
+  document.getElementById('particles-js').style.filter = `hue-rotate(${hue}deg)`;
+});
+</script>
+
+<script>
+/* -------------------------
+  工具与统一样式
+-------------------------- */
+const THEME = {
+  bg: 'rgba(17,34,64,.75)',
+  border: 'rgba(80,209,178,.25)',
+  glow: '#50D1B2',
+  blue: '#4CC9F0',
+  text: 'rgba(226,232,240,.85)',
+  grid: 'rgba(76,201,240,.10)'
+};
+
+function toast(msg){
+  const el = document.createElement('div');
+  el.className = 'fixed top-4 right-4 z-[60] px-4 py-3 rounded-lg glass card-outline card-glow';
+  el.innerHTML = `<div class="text-titleBlue font-semibold mb-1">系统提示</div><div class="text-sm text-gray-200">${msg}</div>`;
+  document.body.appendChild(el);
+  setTimeout(()=>{ el.style.transition='opacity .4s ease, transform .4s ease'; el.style.opacity='0'; el.style.transform='translateY(-10px)'; }, 1400);
+  setTimeout(()=> el.remove(), 1900);
+}
+
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+function rand(min,max){ return min + Math.random()*(max-min); }
+function fmt(n){ return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+function baseGrid(){
+  return {
+    left: 40, right: 18, top: 40, bottom: 40,
+    containLabel: true
+  };
+}
+function baseAxis(){
+  return {
+    axisLine:{ lineStyle:{ color: THEME.border }},
+    axisTick:{ lineStyle:{ color: THEME.border }},
+    axisLabel:{ color: THEME.text },
+    splitLine:{ lineStyle:{ color: THEME.grid }}
+  };
+}
+
+/* -------------------------
+  KPI 初始化
+-------------------------- */
+(function initKPI(){
+  document.getElementById('kpi-city').textContent = fmt(Math.round(rand(120, 360)));
+  document.getElementById('kpi-site').textContent = fmt(Math.round(rand(800, 3200)));
+  document.getElementById('kpi-freq').textContent = '1小时';
+  document.getElementById('kpi-lag').textContent = `${Math.round(rand(2, 18))}min`;
+  document.getElementById('kpi-active').textContent = fmt(Math.round(rand(12000, 68000)));
+  document.getElementById('kpi-hit').textContent = `${Math.round(rand(78, 96))}%`;
+})();
+
+
+/* -------------------------
+  FAQ（保留原逻辑）
+-------------------------- */
+const faqData = [
+  ['这些数据是真实的吗？','子页面当前使用模拟数据，用于展示交互与布局；接入真实API后即可替换。'],
+  ['为什么选择ECharts？','ECharts对地图、Sankey、散点、动态特效等支持完善，且生态丰富，适合比赛展示。'],
+  ['如何扩展到“省-市-站点”三级？','可在地图点击事件中加载站点列表，并用抽屉/弹窗展示站点时间序列与污染物组分。'],
+  ['数据缺测/异常如何处理？','常见策略包括缺测插补、异常点剔除、重复值合并、延迟补数与质量标记字段。'],
+];
+const faq = document.getElementById('faq');
+faqData.forEach(([q,a])=>{
+  const item = document.createElement('div');
+  item.className='rounded-lg neon-border overflow-hidden';
+  item.innerHTML = `
+    <button class="w-full text-left px-4 py-3 flex items-center justify-between hover:bg-titleBlue/5 transition">
+      <span class="font-medium">${q}</span>
+      <i class="fa fa-angle-down text-titleBlue"></i>
+    </button>
+    <div class="px-4 pb-4 text-sm text-gray-200 hidden">${a}</div>
+  `;
+  const btn=item.querySelector('button');
+  const panel=item.querySelector('div');
+  btn.addEventListener('click', ()=>{
+    panel.classList.toggle('hidden');
+    btn.querySelector('i').classList.toggle('fa-angle-up');
+    btn.querySelector('i').classList.toggle('fa-angle-down');
+  });
+  faq.appendChild(item);
+});
+
+/* -------------------------
+  趋势探索（强交互）
+-------------------------- */
+const trend = echarts.init(document.getElementById('trend'));
+const citySel = document.getElementById('city');
+const metricSel = document.getElementById('metric');
+const compareWrap = document.getElementById('compareChips');
+let rangeDays = 7;
+let compareCities = [];
+
+const ALL_CITIES = ['北京','上海','广州','成都','乌鲁木齐','拉萨','香港','杭州','南京','武汉','西安','重庆'];
+function makeDates(days){
+  const out = [];
+  const now = new Date();
+  for(let i=days-1;i>=0;i--){
+    const d = new Date(now.getTime() - i*24*3600*1000);
+    out.push(`${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+  }
+  return out;
+}
+function genSeries(city, metric, days){
+  const base = ({
+    'AQI': 90, 'PM2.5': 45, 'PM10': 70, 'NO2': 35, 'O3': 80, 'SO2': 15, 'CO': 0.9
+  })[metric] ?? 60;
+  const amp = ({
+    'AQI': 40, 'PM2.5': 25, 'PM10': 30, 'NO2': 18, 'O3': 35, 'SO2': 10, 'CO': 0.5
+  })[metric] ?? 20;
+
+  const bias = (city.charCodeAt(0) % 13) - 6;
+  const data = [];
+  let v = base + bias;
+  for(let i=0;i<days;i++){
+    v += rand(-amp*0.25, amp*0.25);
+    const seasonal = Math.sin(i/Math.max(6, days/10))*amp*0.18;
+    const noise = rand(-amp*0.18, amp*0.18);
+    let val = v + seasonal + noise;
+    if(metric==='CO') val = Math.max(0.2, val);
+    data.push(Number(val.toFixed(metric==='CO' ? 2 : 0)));
+  }
+  return data;
+}
+
+function renderCompareChips(){
+  compareWrap.innerHTML = '';
+  if(compareCities.length===0){
+    const hint = document.createElement('div');
+    hint.className = 'text-xs muted';
+    hint.textContent = '暂无对比城市，可点击“加一城”添加对比。';
+    compareWrap.appendChild(hint);
+    return;
+  }
+  compareCities.forEach(c=>{
+    const chip = document.createElement('button');
+    chip.className = 'btn-chip';
+    chip.innerHTML = `<i class="fa fa-tag mr-1"></i>${c} <span class="ml-2 text-titleBlue/70">×</span>`;
+    chip.addEventListener('click', ()=>{
+      compareCities = compareCities.filter(x=>x!==c);
+      renderCompareChips();
+      renderTrend();
+    });
+    compareWrap.appendChild(chip);
+  });
+}
+
+function renderTrend(){
+  const mainCity = citySel.value;
+  const metric = metricSel.value;
+  const dates = makeDates(rangeDays);
+
+  const legend = [mainCity, ...compareCities];
+  const series = legend.map((c, idx)=>({
+    name: c,
+    type: 'line',
+    smooth: true,
+    showSymbol: false,
+    emphasis: { focus: 'series' },
+    lineStyle: { width: idx===0 ? 2.4 : 1.6, opacity: idx===0 ? 0.95 : 0.7 },
+    data: genSeries(c, metric, rangeDays)
+  }));
+
+  trend.setOption({
+    backgroundColor: 'transparent',
+    color: [THEME.glow, THEME.blue, '#8B5CF6', '#F59E0B', '#22C55E', '#E879F9', '#60A5FA'],
+    tooltip: { trigger: 'axis' },
+    legend: {
+      data: legend,
+      textStyle: { color: THEME.text },
+      top: 6
+    },
+    grid: { ...baseGrid(), top: 58 },
+    xAxis: { type:'category', data: dates, ...baseAxis() },
+    yAxis: { type:'value', ...baseAxis() },
+    dataZoom: [
+      { type:'inside', start: 0, end: 100 },
+      { type:'slider', height: 18, bottom: 10, borderColor: THEME.border, fillerColor: 'rgba(80,209,178,.12)', textStyle:{color:THEME.text} }
+    ],
+    series
+  }, true);
+}
+
+document.querySelectorAll('.range-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('btn-chip-active'));
+    btn.classList.add('btn-chip-active');
+    rangeDays = Number(btn.dataset.days);
+    renderTrend();
+    toast(`已切换范围：近${rangeDays}天`);
+  });
+});
+
+document.getElementById('btn-add-compare').addEventListener('click', ()=>{
+  const main = citySel.value;
+  const candidates = ALL_CITIES.filter(c => c!==main && !compareCities.includes(c));
+  if(candidates.length===0){ toast('没有可添加的城市了'); return; }
+  const c = pick(candidates);
+  compareCities.push(c);
+  renderCompareChips();
+  renderTrend();
+  toast(`已添加对比城市：${c}`);
+});
+document.getElementById('btn-clear-compare').addEventListener('click', ()=>{
+  compareCities = [];
+  renderCompareChips();
+  renderTrend();
+  toast('已清空对比城市');
+});
+
+citySel.addEventListener('change', renderTrend);
+metricSel.addEventListener('change', renderTrend);
+
+/* KPI 点击联动：切换指标 */
+document.querySelectorAll('.kpi-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const m = btn.dataset.metric;
+    metricSel.value = m;
+    renderTrend();
+    toast(`已联动趋势指标：${m}`);
+  });
+});
+
+/* -------------------------
+  风险仪表（gauge）+ 人群阈值联动
+-------------------------- */
+const gauge = echarts.init(document.getElementById('gauge'));
+const crowdSel = document.getElementById('crowd');
+const riskLevelEl = document.getElementById('risk-level');
+const riskTipEl = document.getElementById('risk-tip');
+
+function riskRule(aqi, crowd){
+  const thresholdBias = {
+    general: 0,
+    child: -15,
+    elder: -10,
+    asthma: -20
+  }[crowd] ?? 0;
+
+  const v = aqi + thresholdBias;
+  if(v < 50) return { level:'优', tip:'空气质量良好，可正常户外活动。' };
+  if(v < 100) return { level:'良', tip:'敏感人群建议适度减少长时间户外活动。' };
+  if(v < 150) return { level:'轻度污染', tip:'减少户外运动；敏感人群建议佩戴口罩并缩短外出。' };
+  if(v < 200) return { level:'中度污染', tip:'尽量减少外出，必要外出做好防护；关注平台预警。' };
+  if(v < 300) return { level:'重度污染', tip:'建议居家；开启空气净化；敏感人群避免外出。' };
+  return { level:'严重污染', tip:'强烈建议避免外出；关注官方与平台预警信息。' };
+}
+
+let currentAQI = Math.round(rand(35, 220));
+
+function renderGauge(){
+  const crowd = crowdSel.value;
+  const { level, tip } = riskRule(currentAQI, crowd);
+  riskLevelEl.textContent = level;
+  riskTipEl.textContent = tip;
+
+  gauge.setOption({
+    backgroundColor:'transparent',
+    series: [{
+      type: 'gauge',
+      min: 0, max: 300,
+      radius: '95%',
+      axisLine: { lineStyle: { width: 10, color: [[0.33, 'rgba(80,209,178,.85)'], [0.66, 'rgba(76,201,240,.85)'], [1, 'rgba(248,113,113,.85)']] } },
+      splitLine: { length: 10, lineStyle: { color: THEME.border } },
+      axisTick: { length: 6, lineStyle: { color: THEME.border } },
+      axisLabel: { color: THEME.text },
+      pointer: { width: 4, length: '60%' },
+      title: { color: THEME.text, fontSize: 12, offsetCenter: [0, '55%'] },
+      detail: { valueAnimation: true, color: '#fff', fontSize: 20, offsetCenter: [0, '18%'] },
+      data: [{ value: currentAQI, name: 'AQI(模拟)' }]
+    }]
+  }, true);
+}
+crowdSel.addEventListener('change', ()=>{ renderGauge(); toast('人群阈值已切换（模拟）'); });
+
+/* -------------------------
+  构成：堆叠柱 + 环形
+-------------------------- */
+const stack = echarts.init(document.getElementById('stack'));
+const donut = echarts.init(document.getElementById('donut'));
+const seasonSel = document.getElementById('season');
+
+function seasonProfile(season){
+  const base = {
+    spring: {PM25: 26, PM10: 22, NO2: 18, O3: 22, SO2: 7, CO: 5},
+    summer: {PM25: 20, PM10: 18, NO2: 16, O3: 32, SO2: 6, CO: 8},
+    autumn: {PM25: 24, PM10: 23, NO2: 18, O3: 24, SO2: 6, CO: 5},
+    winter: {PM25: 34, PM10: 28, NO2: 18, O3: 10, SO2: 6, CO: 4},
+  }[season];
+  const out = {};
+  Object.keys(base).forEach(k=>{
+    out[k] = clamp(Math.round(base[k] + rand(-4, 4)), 2, 60);
+  });
+  const sum = Object.values(out).reduce((a,b)=>a+b,0);
+  Object.keys(out).forEach(k=> out[k] = Math.round(out[k]/sum*100));
+  return out;
+}
+
+function renderComposition(){
+  const p = seasonProfile(seasonSel.value);
+  const cats = ['PM2.5','PM10','NO2','O3','SO2','CO'];
+  const vals = [p.PM25, p.PM10, p.NO2, p.O3, p.SO2, p.CO];
+
+  stack.setOption({
+    backgroundColor:'transparent',
+    color: [THEME.glow, THEME.blue],
+    tooltip:{ trigger:'axis', axisPointer:{type:'shadow'} },
+    grid: { left: 42, right: 18, top: 24, bottom: 24, containLabel:true },
+    xAxis: { type:'value', ...baseAxis(), max: 100 },
+    yAxis: { type:'category', ...baseAxis(), data: ['占比(%)'] },
+    series: cats.map((c,i)=>({
+      name: c,
+      type:'bar',
+      stack:'total',
+      barWidth: 16,
+      emphasis:{ focus:'series' },
+      data: [vals[i]]
+    })),
+    legend: { show:false }
+  }, true);
+
+  const pieData = cats.map((c,i)=>({name:c, value: vals[i]}));
+  donut.setOption({
+    backgroundColor:'transparent',
+    color: [THEME.glow, THEME.blue, '#8B5CF6', '#F59E0B', '#22C55E', '#E879F9'],
+    tooltip:{ trigger:'item' },
+    legend:{ bottom: 0, textStyle:{color:THEME.text} },
+    series: [{
+      type:'pie',
+      radius:['52%','72%'],
+      center:['50%','45%'],
+      itemStyle:{ borderColor:'rgba(17,34,64,.85)', borderWidth: 2 },
+      label:{ color: THEME.text },
+      emphasis:{ scale: true },
+      data: pieData
+    }]
+  }, true);
+}
+seasonSel.addEventListener('change', ()=>{ renderComposition(); toast('已切换季节构成（模拟）'); });
+
+/* -------------------------
+  质量控制：Sankey + 异常条形
+-------------------------- */
+const sankey = echarts.init(document.getElementById('sankey'));
+const anomaly = echarts.init(document.getElementById('anomaly'));
+const qcDesc = document.getElementById('qc-desc');
+
+const QC_NODE_DESC = {
+  '采集': '对接公开监测/气象/行政区划等数据源；处理频率差异与字段映射。',
+  '清洗': '统一单位与格式；缺测插补（可选）；剔除明显异常点；生成质量标记。',
+  '校验': '规则校验（范围/突变/一致性）；跨源校验（气象与污染物逻辑关系）。',
+  '聚合': '站点→城市→省；小时→日/周/月；支持多粒度同时存储。',
+  '入库': '分区存储与索引；冷热分层；支持回补与版本追溯（示意）。',
+  '服务': 'API/前端缓存；联动图表；权限/限流；对外数据下载与订阅（可扩展）。',
+};
+
+function qcModel(){
+  const base = 1000;
+  const loss1 = Math.round(rand(10, 40));
+  const loss2 = Math.round(rand(8, 35));
+  const loss3 = Math.round(rand(5, 28));
+  const loss4 = Math.round(rand(3, 18));
+  const toService = base - (loss1+loss2+loss3+loss4);
+
+  const nodes = ['采集','清洗','校验','聚合','入库','服务'].map(n=>({name:n}));
+  const links = [
+    {source:'采集', target:'清洗', value: base - loss1},
+    {source:'采集', target:'缺测', value: loss1},
+    {source:'清洗', target:'校验', value: base - loss1 - loss2},
+    {source:'清洗', target:'异常', value: loss2},
+    {source:'校验', target:'聚合', value: base - loss1 - loss2 - loss3},
+    {source:'校验', target:'重复', value: loss3},
+    {source:'聚合', target:'入库', value: base - loss1 - loss2 - loss3 - loss4},
+    {source:'聚合', target:'延迟', value: loss4},
+    {source:'入库', target:'服务', value: toService},
+  ];
+  const extraNodes = ['缺测','异常','重复','延迟'].map(n=>({name:n}));
+  return { nodes: [...nodes, ...extraNodes], links, base, toService, loss1, loss2, loss3, loss4 };
+}
+
+let qc = qcModel();
+
+function renderQC(){
+  qc = qcModel();
+
+  sankey.setOption({
+    backgroundColor:'transparent',
+    tooltip:{ trigger:'item' },
+    series:[{
+      type:'sankey',
+      left: 0, right: 10, top: 10, bottom: 10,
+      emphasis: { focus: 'adjacency' },
+      data: qc.nodes,
+      links: qc.links,
+      lineStyle: { color: 'source', curveness: 0.5, opacity: 0.6 },
+      itemStyle: { borderColor: THEME.border, borderWidth: 1 },
+      label: { color: THEME.text }
+    }]
+  }, true);
+
+  const anomalyCats = ['缺测','异常','重复','延迟'];
+  const anomalyVals = [qc.loss1, qc.loss2, qc.loss3, qc.loss4];
+  anomaly.setOption({
+    backgroundColor:'transparent',
+    color:[THEME.blue],
+    tooltip:{ trigger:'axis', axisPointer:{type:'shadow'} },
+    grid: baseGrid(),
+    xAxis:{ type:'category', data: anomalyCats, ...baseAxis() },
+    yAxis:{ type:'value', ...baseAxis() },
+    series:[{
+      type:'bar',
+      barWidth: 22,
+      data: anomalyVals,
+      itemStyle:{ borderRadius:[6,6,0,0] }
+    }]
+  }, true);
+
+  qcDesc.textContent = `本次示意：原始样本 ${qc.base} 条 → 服务可用 ${qc.toService} 条；缺测/异常/重复/延迟分别为 ${qc.loss1}/${qc.loss2}/${qc.loss3}/${qc.loss4}。点击 Sankey 节点可查看环节说明。`;
+}
+
+document.getElementById('btn-qc').addEventListener('click', ()=>{
+  renderQC();
+  toast('质量控制示例已刷新');
+});
+
+sankey.on('click', (params)=>{
+  if(params && params.data && params.data.name){
+    const name = params.data.name;
+    if(QC_NODE_DESC[name]){
+      toast(`${name}：${QC_NODE_DESC[name]}`);
+      qcDesc.textContent = `【${name}】${QC_NODE_DESC[name]}`;
+    }
+  }
+});
+
+/* -------------------------
+  路线图（timeline-like scatter）
+-------------------------- */
+const roadmap = echarts.init(document.getElementById('roadmap'));
+function roadmapData(){
+  const base = [
+    {t:'v0.1', d:'Demo交互完成：地图/趋势/反馈', m:1},
+    {t:'v0.2', d:'接入真实API：城市级实时数据', m:2},
+    {t:'v0.3', d:'站点级下钻：站点列表 + 时间序列', m:3},
+    {t:'v0.4', d:'质量控制：缺测/异常标记 + 回补', m:4},
+    {t:'v0.5', d:'预警体系：规则 + 模型融合（可扩展）', m:5},
+    {t:'v1.0', d:'产品化：权限/订阅/导出/看板模板', m:6},
+  ];
+  // 轻微随机：让每次刷新不完全一样
+  return base.map(x=>({ ...x, y: clamp(Math.round(rand(55, 92)), 40, 100) }));
+}
+let rd = roadmapData();
+
+function renderRoadmap(){
+  rd = roadmapData();
+  const x = rd.map(v=>v.m);
+  const y = rd.map(v=>v.y);
+  roadmap.setOption({
+    backgroundColor:'transparent',
+    tooltip:{
+      trigger:'item',
+      formatter: (p)=>{
+        const item = rd[p.dataIndex];
+        return `<div style="padding:6px 8px;">
+          <div style="color:#50D1B2;font-weight:600;">${item.t}</div>
+          <div style="color:rgba(226,232,240,.9);font-size:12px;margin-top:4px;">${item.d}</div>
+        </div>`;
+      }
+    },
+    grid: { left: 40, right: 18, top: 20, bottom: 40, containLabel:true },
+    xAxis: {
+      type:'category',
+      data: rd.map(v=>`M${v.m}`),
+      ...baseAxis()
+    },
+    yAxis: { type:'value', min: 30, max: 100, ...baseAxis() },
+    series: [{
+      type:'line',
+      smooth: true,
+      showSymbol: false,
+      lineStyle:{ width: 2, opacity: 0.6, color: THEME.blue },
+      data: y
+    },{
+      type:'scatter',
+      symbolSize: 14,
+      itemStyle:{ color: THEME.glow },
+      data: y.map((val,i)=>({ value:[i, val] })),
+    }]
+  }, true);
+}
+
+document.getElementById('btn-roadmap').addEventListener('click', ()=>{
+  renderRoadmap();
+  toast('路线图已刷新（模拟）');
+});
+
+roadmap.on('click', (params)=>{
+  const idx = params.dataIndex;
+  if(idx!=null && rd[idx]){
+    toast(`${rd[idx].t}：${rd[idx].d}`);
+  }
+});
+
+/* -------------------------
+  反馈：记录 + 统计图（饼 + 柱）
+-------------------------- */
+const fbPie = echarts.init(document.getElementById('fbPie'));
+const fbBar = echarts.init(document.getElementById('fbBar'));
+
+let feedbackStore = []; // {name,type,text,time}
+
+let currentFilter = 'all';
+document.querySelectorAll('.btn-filter').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.btn-filter').forEach(b=>b.classList.remove('btn-chip-active'));
+    btn.classList.add('btn-chip-active');
+    currentFilter = btn.dataset.filter;
+    renderFeedbackList();
+    toast(`已筛选：${currentFilter==='all'?'全部':currentFilter}`);
+  });
+});
+// 默认激活“全部”
+document.querySelector('.btn-filter[data-filter="all"]').classList.add('btn-chip-active');
+
+function renderFeedbackCharts(){
+  const types = ['建议','问题反馈','合作意向'];
+  const counts = types.map(t=>feedbackStore.filter(x=>x.type===t).length);
+  const total = counts.reduce((a,b)=>a+b,0) || 1;
+
+  fbPie.setOption({
+    backgroundColor:'transparent',
+    color: [THEME.glow, THEME.blue, '#F59E0B'],
+    tooltip:{ trigger:'item' },
+    series:[{
+      type:'pie',
+      radius:['50%','72%'],
+      center:['50%','50%'],
+      label:{ color: THEME.text, formatter: '{b}\n{d}%' },
+      itemStyle:{ borderColor:'rgba(17,34,64,.85)', borderWidth: 2 },
+      data: types.map((t,i)=>({name:t, value:counts[i]}))
+    }]
+  }, true);
+
+  fbBar.setOption({
+    backgroundColor:'transparent',
+    color: [THEME.blue],
+    tooltip:{ trigger:'axis', axisPointer:{type:'shadow'} },
+    grid: { left: 34, right: 10, top: 30, bottom: 30, containLabel:true },
+    xAxis: { type:'category', data: types, ...baseAxis(), axisLabel:{ ...baseAxis().axisLabel, fontSize: 10 } },
+    yAxis: { type:'value', ...baseAxis() },
+    series:[{
+      type:'bar',
+      barWidth: 18,
+      data: counts,
+      itemStyle:{ borderRadius:[6,6,0,0] }
+    }],
+    title: {
+      text: `总计 ${total} 条`,
+      left: 6,
+      top: 4,
+      textStyle:{ color: THEME.text, fontSize: 11, fontWeight: 500 }
+    }
+  }, true);
+}
+
+function renderFeedbackList(){
+  const wrap = document.getElementById('feedback');
+  wrap.innerHTML = '';
+
+  const list = (currentFilter==='all')
+    ? feedbackStore
+    : feedbackStore.filter(x=>x.type===currentFilter);
+
+  if(list.length===0){
+    const empty = document.createElement('div');
+    empty.className = 'text-xs muted';
+    empty.textContent = '暂无记录，提交一条反馈试试～';
+    wrap.appendChild(empty);
+    return;
+  }
+
+  list.slice(0, 12).forEach((x, idx)=>{
+    const el = document.createElement('div');
+    el.className='p-4 rounded-lg neon-border bg-titleBlue/5';
+    el.innerHTML = `
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="px-2 py-1 rounded-full text-xs border border-titleBlue/30 text-titleBlue">${x.type}</span>
+            <span class="text-sm text-gray-300">${x.name}</span>
+            <span class="text-xs text-gray-500">${x.time}</span>
+          </div>
+          <div class="text-sm text-gray-200 mt-2 leading-relaxed">${x.text}</div>
+        </div>
+        <button class="btn-chip btn-del" title="删除"><i class="fa fa-times"></i></button>
+      </div>
+    `;
+    el.querySelector('.btn-del').addEventListener('click', ()=>{
+      // 通过 time+idx 近似定位（演示用）
+      feedbackStore.splice(feedbackStore.findIndex(v=>v.time===x.time && v.text===x.text), 1);
+      renderFeedbackList();
+      renderFeedbackCharts();
+      toast('已删除记录（模拟）');
+    });
+    wrap.appendChild(el);
+  });
+}
+
+function safeText(s){
+  return s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+}
+
+document.getElementById('btn-send').addEventListener('click', ()=>{
+  const name = document.getElementById('f1').value.trim() || '匿名用户';
+  const type = document.getElementById('f2').value;
+  const textRaw = document.getElementById('f3').value.trim();
+  if(!textRaw){ toast('请先填写内容'); return; }
+
+  const t = new Date().toLocaleString();
+  feedbackStore.unshift({ name: safeText(name), type, text: safeText(textRaw), time: t });
+
+  document.getElementById('f3').value='';
+  renderFeedbackList();
+  renderFeedbackCharts();
+  toast('已提交反馈（模拟记录）');
+});
+
+/* 初始填充一些反馈，让统计面板有内容 */
+(function seedFeedback(){
+  const seeds = [
+    {name:'匿名用户', type:'建议', text:'希望增加“站点级下钻 + 站点对比”功能。'},
+    {name:'小明', type:'问题反馈', text:'某些城市切换时图表加载可增加骨架屏提示。'},
+    {name:'合作方A', type:'合作意向', text:'我们有气象数据源，想对接联合分析。'},
+    {name:'匿名用户', type:'建议', text:'建议加入“健康建议”更细的人群阈值配置。'},
+  ];
+  seeds.forEach(s=>{
+    feedbackStore.push({ ...s, time: new Date(Date.now()-rand(1,6)*24*3600*1000).toLocaleString(), text: safeText(s.text), name: safeText(s.name) });
+  });
+})();
+	
+function resizeAll(){
+  gauge.resize();
+  trend.resize();
+  stack.resize();
+  donut.resize();
+  sankey.resize();
+  anomaly.resize();
+  roadmap.resize();
+  fbPie.resize();
+  fbBar.resize();
+}
+window.addEventListener('resize', resizeAll);
+
+/* -------------------------
+  首次渲染
+-------------------------- */
+renderGauge();
+renderCompareChips();
+renderTrend();
+renderComposition();
+renderQC();
+renderRoadmap();
+renderFeedbackCharts();
+renderFeedbackList();
+
+/* 让仪表盘也“像实时”一点：轻微波动（演示） */
+setInterval(()=>{
+  const step = rand(-12, 12);
+  currentAQI = clamp(Math.round(currentAQI + step), 12, 260);
+  renderGauge();
+}, 5200);
+
+</script>
+
+</body>
+</html>

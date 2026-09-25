@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="https://fastly.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://fastly.jsdelivr.net/npm/echarts@4.9.0/map/js/china.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#050A18',
+                        semiBlue: '#0B1A33',
+                        lightBlue: '#64FFDA',
+                        accent: '#50D1B2',
+                        danger: '#FF595E'
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass-panel { @apply bg-semiBlue/60 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl; }
+            .neon-text { text-shadow: 0 0 8px rgba(80,209,178,0.6); }
+            .scan-line {
+                background: linear-gradient(to bottom, transparent, rgba(80,209,178,0.1), transparent);
+                background-size: 100% 200%;
+                animation: scan 4s linear infinite;
+            }
+            @keyframes scan { 0% { background-position: 0 -100%; } 100% { background-position: 0 100%; } }
+        }
+    </style>
+    <title>溯源看板·全国省市联动增强版</title>
+</head>
+<body class="bg-darkBg text-gray-100 font-sans overflow-x-hidden">
+<div id="particles-js" class="fixed inset-0 z-0 opacity-40"></div>
+<div class="relative z-10 container mx-auto px-4 py-6">
+
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+        <div>
+            <div class="flex items-center gap-3 text-accent mb-2">
+                <span class="px-2 py-0.5 border border-accent/40 rounded text-xs tracking-widest uppercase">Real-time Analysis</span>
+                <span id="liveClock" class="font-mono text-xs opacity-70"></span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-black neon-text italic tracking-tighter">溯源看板·成因解析 <span class="text-gray-500 font-light not-italic text-xl">V3.1</span></h1>
+        </div>
+        <div class="flex gap-3">
+            <button onclick="window.location.reload()" class="px-4 py-2 rounded-full border border-accent/20 hover:bg-accent/10 transition text-sm flex items-center gap-2">
+                <i class="fa fa-refresh"></i> 数据重构
+            </button>
+        </div>
+    </header>
+
+    <!-- 省份-城市联动选择器 (新增) -->
+    <div class="glass-panel p-4 mb-6 flex flex-wrap items-center gap-4">
+        <span class="text-sm text-gray-300"><i class="fa fa-map-marker mr-1 text-accent"></i>地区选择：</span>
+        <select id="provinceSelector" class="bg-darkBg/80 border border-accent/30 rounded px-3 py-1.5 text-sm text-white outline-none focus:border-accent w-40">
+            <!-- 由JS动态填充 -->
+        </select>
+        <select id="citySelector" class="bg-darkBg/80 border border-accent/30 rounded px-3 py-1.5 text-sm text-white outline-none focus:border-accent w-48">
+            <!-- 由JS动态填充 -->
+        </select>
+        <span class="text-xs text-gray-400">切换省市后右侧面板数据自动更新，地图点击省份可快速选择</span>
+    </div>
+
+    <!-- 第一行：30城趋势 + 右侧焦点卡片 -->
+    <div class="grid grid-cols-12 gap-6 mb-6">
+        <section class="col-span-12 xl:col-span-8 glass-panel p-6 relative">
+            <div class="scan-line absolute inset-0 pointer-events-none"></div>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-bold flex items-center gap-2">
+                    <i class="fa fa-line-chart text-accent"></i> 30 城 AQI 改善轨迹 (1995-2025)
+                </h2>
+                <div id="chartLegend" class="flex flex-wrap gap-2"></div>
+            </div>
+            <div id="trendChart" class="w-full h-[450px]"></div>
+        </section>
+
+        <aside class="col-span-12 xl:col-span-4 space-y-6">
+            <!-- 焦点城市卡片 -->
+            <div class="glass-panel p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h2 id="focusCityName" class="text-3xl font-bold text-accent">北京市</h2>
+                    <span id="cityRank" class="bg-accent/20 text-accent px-2 py-1 rounded text-xs italic">省会</span>
+                </div>
+                <div id="radarChart" class="w-full h-[220px]"></div>
+                <div class="grid grid-cols-2 gap-4 mt-4">
+                    <div class="p-3 bg-white/5 rounded-lg border border-white/5">
+                        <p class="text-[10px] text-gray-400 uppercase">当前 AQI 指数</p>
+                        <p id="stat-aqi" class="text-2xl font-mono text-lightBlue">--</p>
+                    </div>
+                    <div class="p-3 bg-white/5 rounded-lg border border-white/5">
+                        <p class="text-[10px] text-gray-400 uppercase">治理成效</p>
+                        <p id="stat-eff" class="text-2xl font-mono text-accent">--</p>
+                    </div>
+                </div>
+            </div>
+            <!-- 新增：焦点城市污染物构成饼图 -->
+            <div class="glass-panel p-6">
+                <h3 class="text-sm font-bold mb-3 flex items-center gap-2 text-gray-400">
+                    <i class="fa fa-pie-chart text-accent"></i> 首要污染物构成
+                </h3>
+                <div id="focusPieChart" class="w-full h-[200px]"></div>
+            </div>
+            <!-- 诊断结论 -->
+            <div class="glass-panel p-6">
+                <h3 class="text-sm font-bold mb-3 flex items-center gap-2 text-gray-400">
+                    <i class="fa fa-comment-o text-accent"></i> 归因诊断结论
+                </h3>
+                <p id="diagnosisText" class="text-sm text-gray-300 leading-relaxed italic">
+                    正在进行多源数据交叉验证... 请点击图表或地图中的城市节点获取详细诊断结论。
+                </p>
+            </div>
+        </aside>
+    </div>
+
+    <!-- 第二行：原有两个图表 + 新增两个小图表（紧凑布局） -->
+    <div class="grid grid-cols-12 gap-6 mb-6">
+        <!-- 极端污染峰值透视 (保留) -->
+        <section class="col-span-12 lg:col-span-5 glass-panel p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold">极端污染峰值透视</h2>
+                <button id="toggleAxis" class="text-xs text-accent underline">切换断点</button>
+            </div>
+            <div id="breakBarChart" class="w-full h-[350px]"></div>
+        </section>
+        <!-- 跨区域污染传输链路 (增强版：点击地图省份可联动) -->
+        <section class="col-span-12 lg:col-span-4 glass-panel p-6">
+            <h2 class="text-lg font-bold mb-4">跨区域污染传输链路</h2>
+            <div id="flowMapChart" class="w-full h-[350px]"></div>
+        </section>
+        <!-- 新增：全国首要污染物分布（环形图） -->
+        <section class="col-span-12 lg:col-span-3 glass-panel p-6">
+            <h2 class="text-lg font-bold mb-4">首要污染物分布</h2>
+            <div id="nationalPieChart" class="w-full h-[350px]"></div>
+        </section>
+    </div>
+
+    <!-- 第三行：新增多个图表，使用4列布局 -->
+    <div class="grid grid-cols-12 gap-6 mb-6">
+        <!-- 月度AQI热力图（日历图）占6列 -->
+        <section class="col-span-12 lg:col-span-6 glass-panel p-6">
+            <h2 class="text-lg font-bold mb-4">月度AQI热力图 (2024年)</h2>
+            <div id="heatmapChart" class="w-full h-[350px]"></div>
+        </section>
+        <!-- 气象因子散点图占6列 -->
+        <section class="col-span-12 lg:col-span-6 glass-panel p-6">
+            <h2 class="text-lg font-bold mb-4">气象因子与AQI相关性</h2>
+            <div id="scatterChart" class="w-full h-[350px]"></div>
+        </section>
+    </div>
+
+    <div class="grid grid-cols-12 gap-6 mb-6">
+        <!-- 污染源贡献堆积柱状图（按城市）占7列 -->
+        <section class="col-span-12 lg:col-span-7 glass-panel p-6">
+            <h2 class="text-lg font-bold mb-4">污染源贡献堆积 (当前城市)</h2>
+            <div id="stackBarChart" class="w-full h-[350px]"></div>
+        </section>
+        <!-- 排名前10城市AQI横向柱状图占5列 -->
+        <section class="col-span-12 lg:col-span-5 glass-panel p-6">
+            <h2 class="text-lg font-bold mb-4">AQI top10 城市</h2>
+            <div id="top10Chart" class="w-full h-[350px]"></div>
+        </section>
+    </div>
+
+    <!-- 数据爬虫代码折叠区 (增强版) -->
+    <div class="glass-panel p-6 mb-6">
+        <details class="text-sm">
+            <summary class="text-accent font-bold cursor-pointer flex items-center gap-2">
+                <i class="fa fa-code"></i> 查看数据爬虫示例 (Python) · 推荐数据源
+            </summary>
+            <div class="mt-4 text-gray-300 space-y-2 border-t border-white/10 pt-4">
+                <p class="text-xs text-gray-400">
+                    数据源推荐：<br/>
+                    • <a href="https://www.cnemc.cn/" target="_blank" class="text-accent underline">中国环境监测总站</a> (官方发布，需解析)<br/>
+                    • <a href="https://aqicn.org" target="_blank" class="text-accent underline">aqicn.org</a> (全球AQI，提供API)<br/>
+                    • <a href="https://www.qweather.com/" target="_blank" class="text-accent underline">和风天气</a> (空气质量API)<br/>
+                    • <a href="https://www.weather.com.cn/" target="_blank" class="text-accent underline">中国天气网</a> (气象数据)
+                </p>
+                <pre class="bg-darkBg/80 p-4 rounded overflow-x-auto text-[12px] leading-relaxed">
+# ========== Python 爬虫示例 ==========
+
+import requests
+import pandas as pd
+
+# ---------- 1. 从 aqicn.org API 获取实时AQI (需token) ----------
+def fetch_aqicn(city="beijing", token="your_token"):
+    """城市名拼音，如 beijing, shanghai"""
+    url = f"http://api.waqi.info/feed/{city}/?token={token}"
+    resp = requests.get(url).json()
+    if resp['status'] == 'ok':
+        data = resp['data']
+        return {
+            'city': data['city']['name'],
+            'aqi': data['aqi'],
+            'pm25': data['iaqi'].get('pm25', {}).get('v'),
+            'pm10': data['iaqi'].get('pm10', {}).get('v'),
+            'time': data['time']['s']
+        }
+    return None
+
+# ---------- 2. 中国环境监测总站全国城市实时发布平台 (模拟请求) ----------
+def fetch_cnemc_realtime():
+    """实际接口需要抓包分析，此处为示意"""
+    url = "https://air.cnemc.cn:18007/emcpublish/ClientBin/Env-CnemcPublish-RiaService-EnvCnemcPublish.svc/binary/GetAQIData"
+    headers = {"Content-Type": "application/json"}
+    # 需根据实际抓包构造payload
+    payload = {"cityCode": "310000"}  # 上海为例
+    resp = requests.post(url, json=payload, headers=headers)
+    # 处理二进制响应...
+    return resp.content
+
+# ---------- 3. 和风天气空气质量API (需key) ----------
+def fetch_qweather(city_id, key):
+    """
+    city_id 如 "101010100" 北京
+    注册和风开发者获取key
+    """
+    url = f"https://devapi.qweather.com/v7/air/now?location={city_id}&key={key}"
+    data = requests.get(url).json()
+    return data
+
+# ---------- 4. 历史数据爬取示例：爬取aqicn.org历史页面 ----------
+from bs4 import BeautifulSoup
+
+def fetch_aqicn_history(city="beijing", year=2024):
+    """注意遵守robots.txt，实际可用官方API"""
+    url = f"https://aqicn.org/city/{city}/{year}/"
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    soup = BeautifulSoup(requests.get(url, headers=headers).text, 'html.parser')
+    # 解析表格...
+    # 此处略，因不同年份页面结构不同
+    pass
+
+# ========== 建议：使用官方API获取稳定数据 ==========
+                </pre>
+                <p class="text-xs text-gray-400 mt-2">
+                    * 示例代码仅供学习参考，实际使用时请遵守网站robots.txt及服务条款。
+                </p>
+            </div>
+        </details>
+    </div>
+
+    <footer class="mt-12 text-center text-gray-600 text-[10px] tracking-widest uppercase">
+        Data Source: CNEMC Simulated | 省市联动·地图互动 | © 2026
+    </footer>
+</div>
+
+<script>
+    // ========== 省份-城市完整数据 (包含全国所有地级市) ==========
+    const provincesCities = {
+        "北京市": ["北京市"],
+        "天津市": ["天津市"],
+        "上海市": ["上海市"],
+        "重庆市": ["重庆市"],
+        "河北省": [
+            "石家庄市", "唐山市", "秦皇岛市", "邯郸市", "邢台市", "保定市", "张家口市", 
+            "承德市", "沧州市", "廊坊市", "衡水市", "辛集市", "定州市"
+        ],
+        "山西省": [
+            "太原市", "大同市", "阳泉市", "长治市", "晋城市", "朔州市", "晋中市", 
+            "运城市", "忻州市", "临汾市", "吕梁市"
+        ],
+        "内蒙古自治区": [
+            "呼和浩特市", "包头市", "乌海市", "赤峰市", "通辽市", "鄂尔多斯市", "呼伦贝尔市", 
+            "巴彦淖尔市", "乌兰察布市", "兴安盟", "锡林郭勒盟", "阿拉善盟"
+        ],
+        "辽宁省": [
+            "沈阳市", "大连市", "鞍山市", "抚顺市", "本溪市", "丹东市", "锦州市", 
+            "营口市", "阜新市", "辽阳市", "盘锦市", "铁岭市", "朝阳市", "葫芦岛市"
+        ],
+        "吉林省": [
+            "长春市", "吉林市", "四平市", "辽源市", "通化市", "白山市", "松原市", 
+            "白城市", "延边朝鲜族自治州"
+        ],
+        "黑龙江省": [
+            "哈尔滨市", "齐齐哈尔市", "鸡西市", "鹤岗市", "双鸭山市", "大庆市", "伊春市", 
+            "佳木斯市", "七台河市", "牡丹江市", "黑河市", "绥化市", "大兴安岭地区"
+        ],
+        "江苏省": [
+            "南京市", "无锡市", "徐州市", "常州市", "苏州市", "南通市", "连云港市", 
+            "淮安市", "盐城市", "扬州市", "镇江市", "泰州市", "宿迁市"
+        ],
+        "浙江省": [
+            "杭州市", "宁波市", "温州市", "嘉兴市", "湖州市", "绍兴市", "金华市", 
+            "衢州市", "舟山市", "台州市", "丽水市"
+        ],
+        "安徽省": [
+            "合肥市", "芜湖市", "蚌埠市", "淮南市", "马鞍山市", "淮北市", "铜陵市", 
+            "安庆市", "黄山市", "滁州市", "阜阳市", "宿州市", "六安市", "亳州市", 
+            "池州市", "宣城市"
+        ],
+        "福建省": [
+            "福州市", "厦门市", "莆田市", "三明市", "泉州市", "漳州市", "南平市", 
+            "龙岩市", "宁德市"
+        ],
+        "江西省": [
+            "南昌市", "景德镇市", "萍乡市", "九江市", "新余市", "鹰潭市", "赣州市", 
+            "吉安市", "宜春市", "抚州市", "上饶市"
+        ],
+        "山东省": [
+            "济南市", "青岛市", "淄博市", "枣庄市", "东营市", "烟台市", "潍坊市", 
+            "济宁市", "泰安市", "威海市", "日照市", "临沂市", "德州市", "聊城市", 
+            "滨州市", "菏泽市"
+        ],
+        "河南省": [
+            "郑州市", "开封市", "洛阳市", "平顶山市", "安阳市", "鹤壁市", "新乡市", 
+            "焦作市", "濮阳市", "许昌市", "漯河市", "三门峡市", "南阳市", "商丘市", 
+            "信阳市", "周口市", "驻马店市", "济源市"
+        ],
+        "湖北省": [
+            "武汉市", "黄石市", "十堰市", "宜昌市", "襄阳市", "鄂州市", "荆门市", 
+            "孝感市", "荆州市", "黄冈市", "咸宁市", "随州市", "恩施土家族苗族自治州", 
+            "仙桃市", "潜江市", "天门市", "神农架林区"
+        ],
+        "湖南省": [
+            "长沙市", "株洲市", "湘潭市", "衡阳市", "邵阳市", "岳阳市", "常德市", 
+            "张家界市", "益阳市", "郴州市", "永州市", "怀化市", "娄底市", "湘西土家族苗族自治州"
+        ],
+        "广东省": [
+            "广州市", "韶关市", "深圳市", "珠海市", "汕头市", "佛山市", "江门市", 
+            "湛江市", "茂名市", "肇庆市", "惠州市", "梅州市", "汕尾市", "河源市", 
+            "阳江市", "清远市", "东莞市", "中山市", "潮州市", "揭阳市", "云浮市"
+        ],
+        "广西壮族自治区": [
+            "南宁市", "柳州市", "桂林市", "梧州市", "北海市", "防城港市", "钦州市", 
+            "贵港市", "玉林市", "百色市", "贺州市", "河池市", "来宾市", "崇左市"
+        ],
+        "海南省": [
+            "海口市", "三亚市", "三沙市", "儋州市", "五指山市", "琼海市", "文昌市", 
+            "万宁市", "东方市", "定安县", "屯昌县", "澄迈县", "临高县", "白沙黎族自治县", 
+            "昌江黎族自治县", "乐东黎族自治县", "陵水黎族自治县", "保亭黎族苗族自治县", "琼中黎族苗族自治县"
+        ],
+        "四川省": [
+            "成都市", "自贡市", "攀枝花市", "泸州市", "德阳市", "绵阳市", "广元市", 
+            "遂宁市", "内江市", "乐山市", "南充市", "眉山市", "宜宾市", "广安市", 
+            "达州市", "雅安市", "巴中市", "资阳市", "阿坝藏族羌族自治州", "甘孜藏族自治州", 
+            "凉山彝族自治州"
+        ],
+        "贵州省": [
+            "贵阳市", "六盘水市", "遵义市", "安顺市", "毕节市", "铜仁市", "黔西南布依族苗族自治州", 
+            "黔东南苗族侗族自治州", "黔南布依族苗族自治州"
+        ],
+        "云南省": [
+            "昆明市", "曲靖市", "玉溪市", "保山市", "昭通市", "丽江市", "普洱市", 
+            "临沧市", "楚雄彝族自治州", "红河哈尼族彝族自治州", "文山壮族苗族自治州", "西双版纳傣族自治州", 
+            "大理白族自治州", "德宏傣族景颇族自治州", "怒江傈僳族自治州", "迪庆藏族自治州"
+        ],
+        "西藏自治区": [
+            "拉萨市", "日喀则市", "昌都市", "林芝市", "山南市", "那曲市", "阿里地区"
+        ],
+        "陕西省": [
+            "西安市", "铜川市", "宝鸡市", "咸阳市", "渭南市", "延安市", "汉中市", 
+            "榆林市", "安康市", "商洛市"
+        ],
+        "甘肃省": [
+            "兰州市", "嘉峪关市", "金昌市", "白银市", "天水市", "武威市", "张掖市", 
+            "平凉市", "酒泉市", "庆阳市", "定西市", "陇南市", "临夏回族自治州", 
+            "甘南藏族自治州"
+        ],
+        "青海省": [
+            "西宁市", "海东市", "海北藏族自治州", "黄南藏族自治州", "海南藏族自治州", 
+            "果洛藏族自治州", "玉树藏族自治州", "海西蒙古族藏族自治州"
+        ],
+        "宁夏回族自治区": [
+            "银川市", "石嘴山市", "吴忠市", "固原市", "中卫市"
+        ],
+        "新疆维吾尔自治区": [
+            "乌鲁木齐市", "克拉玛依市", "吐鲁番市", "哈密市", "昌吉回族自治州", "博尔塔拉蒙古自治州", 
+            "巴音郭楞蒙古自治州", "阿克苏地区", "克孜勒苏柯尔克孜自治州", "喀什地区", "和田地区", 
+            "伊犁哈萨克自治州", "塔城地区", "阿勒泰地区", "石河子市", "阿拉尔市", "图木舒克市", 
+            "五家渠市", "北屯市", "铁门关市", "双河市", "可克达拉市", "昆玉市", "胡杨河市"
+        ],
+        "台湾省": [
+            "台北市", "新北市", "桃园市", "台中市", "台南市", "高雄市", "基隆市", 
+            "新竹市", "嘉义市", "新竹县", "苗栗县", "彰化县", "南投县", "云林县", 
+            "嘉义县", "屏东县", "宜兰县", "花莲县", "台东县", "澎湖县", "金门县", 
+            "连江县"
+        ],
+        "香港特别行政区": ["香港岛", "九龙", "新界"],
+        "澳门特别行政区": ["澳门半岛", "氹仔", "路环", "路氹城"]
+    };
+
+    // 30个代表性城市（用于趋势图）
+    const CITIES = [
+        '北京', '上海', '广州', '深圳', '成都', '杭州', '西安', '武汉', '南京', '天津',
+        '郑州', '长沙', '重庆', '苏州', '沈阳', '青岛', '昆明', '合肥', '济南', '厦门',
+        '福州', '大连', '哈尔滨', '石家庄', '太原', '南宁', '贵阳', '兰州', '乌鲁木齐', '拉萨'
+    ];
+
+    // 全局当前焦点城市
+    let currentCity = '北京市';
+
+    // 工具函数：根据城市名生成稳定的污染基准值 (哈希)
+    function hashCode(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const chr = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + chr;
+            hash |= 0;
+        }
+        return Math.abs(hash);
+    }
+
+    function getCityBase(city) {
+        const seed = (hashCode(city) % 1000) / 1000;
+        const pm25 = 25 + seed * 80;
+        const pm10 = pm25 * 1.2 + 5;
+        const o3 = 30 + seed * 100;
+        const no2 = 15 + seed * 60;
+        const so2 = 5 + seed * 40;
+        const co = 0.5 + seed * 2.5;
+        const aqi = Math.round(pm25 * 0.5 + o3 * 0.3 + no2 * 0.2);
+        return { pm25, pm10, o3, no2, so2, co, aqi };
+    }
+
+    function getCityAQI(city) {
+        return Math.round(getCityBase(city).aqi * (0.85 + Math.random() * 0.3));
+    }
+
+    // --- 初始化图表实例 ---
+    const trendChart = echarts.init(document.getElementById('trendChart'));
+    const breakChart = echarts.init(document.getElementById('breakBarChart'));
+    const radarChart = echarts.init(document.getElementById('radarChart'));
+    const flowMapChart = echarts.init(document.getElementById('flowMapChart'));
+    const focusPieChart = echarts.init(document.getElementById('focusPieChart'));
+    const nationalPieChart = echarts.init(document.getElementById('nationalPieChart'));
+    const heatmapChart = echarts.init(document.getElementById('heatmapChart'));
+    const scatterChart = echarts.init(document.getElementById('scatterChart'));
+    const stackBarChart = echarts.init(document.getElementById('stackBarChart'));
+    const top10Chart = echarts.init(document.getElementById('top10Chart'));
+
+    // --- 模拟 1995-2025 历史数据 (用于30城趋势) ---
+    const generateHistory = () => {
+        const years = [1995, 2000, 2005, 2010, 2015, 2020, 2025];
+        const raw = [['Year', 'AQI', 'City']];
+        CITIES.forEach(city => {
+            let base = 150 + Math.random() * 100;
+            years.forEach(yr => {
+                base -= (Math.random() * 20 + 5);
+                if(base < 25) base = 25;
+                raw.push([yr, Math.round(base), city]);
+            });
+        });
+        return raw;
+    };
+    const historySource = generateHistory();
+
+    // 1. 动态轨迹图 (30城)
+    function initTrend() {
+        const seriesList = CITIES.slice(0, 15).map(city => ({
+            type: 'line',
+            name: city,
+            datasetId: 'ds_' + city,
+            showSymbol: false,
+            endLabel: { show: true, formatter: '{a}', color: '#50D1B2', fontSize: 10 },
+            labelLayout: { moveOverlap: 'shiftY' },
+            emphasis: { focus: 'series' },
+            encode: { x: 'Year', y: 'AQI', label: ['City', 'AQI'], itemName: 'Year', tooltip: ['AQI'] }
+        }));
+
+        trendChart.setOption({
+            animationDuration: 10000,
+            dataset: [
+                { id: 'ds_raw', source: historySource },
+                ...CITIES.slice(0,15).map(city => ({
+                    id: 'ds_' + city,
+                    fromDatasetId: 'ds_raw',
+                    transform: { type: 'filter', config: { dimension: 'City', '=': city } }
+                }))
+            ],
+            tooltip: { trigger: 'axis', backgroundColor: '#0B1A33', borderColor: '#50D1B2', textStyle: {color: '#fff'} },
+            xAxis: { type: 'category', axisLine: {lineStyle: {color: '#2A3F5F'}} },
+            yAxis: { name: 'AQI', splitLine: {lineStyle: {color: 'rgba(255,255,255,0.05)'}} },
+            grid: { right: 100, top: 30, bottom: 30, left: 40 },
+            series: seriesList
+        }, true);
+    }
+
+    // 2. 断点柱状图
+    let isAxisBroken = true;
+    function initBreak() {
+        const data = CITIES.map(c => {
+            let val = Math.random() * 80 + 20;
+            if(['北京','石家庄','太原','沈阳'].includes(c)) val += 400;
+            return { name: c, value: Math.round(val) };
+        }).sort((a,b) => b.value - a.value);
+        breakChart.setOption({
+            tooltip: { trigger: 'axis' },
+            xAxis: { type: 'category', data: data.map(d => d.name), axisLabel: {rotate: 45, fontSize: 9} },
+            yAxis: {
+                type: 'value',
+                breaks: isAxisBroken ? [{ start: 150, end: 380, gap: '2%' }] : [],
+                splitLine: {show: false}
+            },
+            series: [{
+                type: 'bar',
+                data: data.map(d => d.value),
+                itemStyle: { color: new echarts.graphic.LinearGradient(0,0,0,1, [{offset:0, color:'#64FFDA'}, {offset:1, color:'#112240'}]) }
+            }]
+        }, true);
+    }
+
+    // 3. 更新焦点城市所有相关图表 (基于当前城市名)
+    function updateFocus(cityName) {
+        currentCity = cityName;
+        document.getElementById('focusCityName').innerText = cityName;
+        const aqiVal = getCityAQI(cityName);
+        document.getElementById('stat-aqi').innerText = aqiVal;
+        document.getElementById('stat-eff').innerText = (Math.random() * 15 + 5).toFixed(1) + '%';
+        document.getElementById('diagnosisText').innerText = `针对 ${cityName} 的分析显示，该地区目前主要的污染成因来自“区域跨尺度输送”及“二次颗粒物生成”。建议在风速低于 2m/s 时启动精细化减排预案。`;
+
+        // 雷达图 (随机模拟，但基于城市名固定随机种子)
+        radarChart.setOption({
+            radar: {
+                indicator: [{name:'工业', max:100}, {name:'交通', max:100}, {name:'扬尘', max:100}, {name:'气象', max:100}, {name:'区域', max:100}],
+                splitArea: {show: false},
+                axisLine: {lineStyle: {color: 'rgba(80,209,178,0.2)'}}
+            },
+            series: [{
+                type: 'radar',
+                data: [{
+                    value: [
+                        (hashCode(cityName+'_ind')%70+20),
+                        (hashCode(cityName+'_tra')%70+20),
+                        (hashCode(cityName+'_dust')%70+20),
+                        (hashCode(cityName+'_met')%70+20),
+                        (hashCode(cityName+'_reg')%70+20)
+                    ],
+                    name: cityName,
+                    areaStyle: {color: 'rgba(80,209,178,0.3)'},
+                    itemStyle: {color: '#50D1B2'}
+                }]
+            }]
+        }, true);
+
+        // 焦点城市饼图
+        focusPieChart.setOption({
+            tooltip: {trigger: 'item'},
+            series: [{
+                type: 'pie',
+                radius: ['40%', '70%'],
+                data: [
+                    { name: 'PM2.5', value: hashCode(cityName+'_pm25')%50+20 },
+                    { name: 'PM10', value: hashCode(cityName+'_pm10')%40+15 },
+                    { name: 'O₃', value: hashCode(cityName+'_o3')%30+10 },
+                    { name: 'NO₂', value: hashCode(cityName+'_no2')%20+5 },
+                    { name: 'SO₂', value: hashCode(cityName+'_so2')%15+2 }
+                ],
+                label: { color: '#ccc' },
+                itemStyle: { borderRadius: 8, borderColor: '#0B1A33', borderWidth: 2 }
+            }]
+        }, true);
+
+        // 污染源贡献堆积柱状图
+        stackBarChart.setOption({
+            tooltip: { trigger: 'axis' },
+            legend: { textStyle: {color: '#ccc'} },
+            xAxis: { type: 'category', data: ['工业', '交通', '扬尘', '居民', '其他'] },
+            yAxis: { type: 'value' },
+            series: [
+                { name: '贡献值', type: 'bar', data: [
+                    hashCode(cityName+'_ind2')%50,
+                    hashCode(cityName+'_tra2')%40,
+                    hashCode(cityName+'_dust2')%30,
+                    hashCode(cityName+'_res')%20,
+                    hashCode(cityName+'_oth')%10
+                ], stack: 'total', color: '#50D1B2' }
+            ]
+        }, true);
+    }
+
+    // 4. 全国首要污染物分布 (环形图) - 固定数据
+    function initNationalPie() {
+        nationalPieChart.setOption({
+            tooltip: { trigger: 'item' },
+            series: [{
+                type: 'pie',
+                radius: ['50%', '70%'],
+                data: [
+                    { name: 'PM2.5', value: 45 },
+                    { name: 'PM10', value: 28 },
+                    { name: 'O₃', value: 18 },
+                    { name: 'NO₂', value: 7 },
+                    { name: 'SO₂', value: 2 }
+                ],
+                label: { color: '#ccc' },
+                itemStyle: { borderRadius: 8, borderColor: '#0B1A33', borderWidth: 2 }
+            }]
+        }, true);
+    }
+
+    // 5. 月度AQI热力图
+    function initHeatmap() {
+        const months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+        const days = Array.from({length:31}, (_,i) => i+1);
+        const data = [];
+        for (let i = 0; i < months.length; i++) {
+            for (let j = 0; j < days.length; j++) {
+                data.push([i, j, Math.floor(Math.random()*150 + 20)]);
+            }
+        }
+        heatmapChart.setOption({
+            tooltip: { position: 'top' },
+            xAxis: { type: 'category', data: months, axisLabel: {rotate: 30} },
+            yAxis: { type: 'category', data: days, axisLabel: {interval: 5} },
+            visualMap: { min: 0, max: 200, calculable: true, orient: 'horizontal', left: 'center', inRange: { color: ['#2A3F5F','#50D1B2','#FF595E'] } },
+            series: [{
+                type: 'heatmap',
+                data: data,
+                label: { show: false },
+                emphasis: { itemStyle: { borderColor: '#fff', borderWidth: 1 } }
+            }]
+        }, true);
+    }
+
+    // 6. 气象因子散点图
+    function initScatter() {
+        const data = [];
+        for (let i = 0; i < 100; i++) {
+            data.push([Math.random()*35 - 5, Math.random()*150 + 20]);
+        }
+        scatterChart.setOption({
+            tooltip: { trigger: 'axis' },
+            xAxis: { name: '温度(℃)', type: 'value' },
+            yAxis: { name: 'AQI', type: 'value' },
+            series: [{
+                type: 'scatter',
+                data: data,
+                symbolSize: 8,
+                itemStyle: { color: '#64FFDA' }
+            }]
+        }, true);
+    }
+
+    // 7. 排名前10城市横向柱状图
+    function initTop10() {
+        const sorted = CITIES.map(c => ({name: c, aqi: Math.floor(Math.random()*200+20)})).sort((a,b) => b.aqi - a.aqi).slice(0,10);
+        top10Chart.setOption({
+            tooltip: { trigger: 'axis' },
+            xAxis: { type: 'value' },
+            yAxis: { type: 'category', data: sorted.map(d => d.name) },
+            series: [{
+                type: 'bar',
+                data: sorted.map(d => d.aqi),
+                itemStyle: { color: new echarts.graphic.LinearGradient(0,0,1,0, [{offset:0, color:'#64FFDA'}, {offset:1, color:'#50D1B2'}]) }
+            }]
+        }, true);
+    }
+
+    // 8. 地图流向图 (点击地图省份联动)
+    function initMap() {
+        flowMapChart.setOption({
+            geo: {
+                map: 'china', roam: true, zoom: 1.2,
+                itemStyle: { areaColor: '#0B1A33', borderColor: '#2A3F5F' },
+                emphasis: { itemStyle: { areaColor: '#112240' } }
+            },
+            series: [{
+                type: 'lines',
+                effect: { show: true, period: 5, trailLength: 0.5, color: '#fff', symbolSize: 2 },
+                lineStyle: { normal: { color: '#50D1B2', width: 1, curveness: 0.2, opacity: 0.2 } },
+                data: [
+                    { coords: [[114.48, 38.03], [116.46, 39.92]] }, // 石家庄 -> 北京
+                    { coords: [[112.53, 37.87], [116.46, 39.92]] }, // 太原 -> 北京
+                    { coords: [[121.48, 31.22], [118.78, 32.04]] }  // 上海 -> 南京
+                ]
+            }]
+        }, true);
+
+        // 添加地图点击事件
+        flowMapChart.on('click', {seriesName: 'lines'}, (params) => {
+            // 点击到线条可能没有省份信息，忽略
+        });
+        // 点击geo区域
+        flowMapChart.on('click', {geoIndex: 0}, (params) => {
+            const provinceName = params.name;
+            if (provincesCities[provinceName]) {
+                const cities = provincesCities[provinceName];
+                if (cities.length > 0) {
+                    // 默认选择第一个城市（省会）
+                    const firstCity = cities[0];
+                    // 同步省份下拉框
+                    document.getElementById('provinceSelector').value = provinceName;
+                    updateCitiesByProvince(provinceName, firstCity);
+                    updateFocus(firstCity);
+                }
+            }
+        });
+    }
+
+    // --- 省市联动逻辑 ---
+    const provinceSelect = document.getElementById('provinceSelector');
+    const citySelect = document.getElementById('citySelector');
+
+    // 填充省份
+    function initProvinces() {
+        const provinces = Object.keys(provincesCities);
+        provinces.forEach(p => {
+            const option = document.createElement('option');
+            option.value = p;
+            option.textContent = p;
+            provinceSelect.appendChild(option);
+        });
+        provinceSelect.value = '北京市';
+        updateCitiesByProvince('北京市', '北京市');
+    }
+
+    function updateCitiesByProvince(province, selectedCity = null) {
+        const cities = provincesCities[province] || [];
+        citySelect.innerHTML = '';
+        cities.forEach(c => {
+            const option = document.createElement('option');
+            option.value = c;
+            option.textContent = c;
+            citySelect.appendChild(option);
+        });
+        if (selectedCity && cities.includes(selectedCity)) {
+            citySelect.value = selectedCity;
+        } else if (cities.length > 0) {
+            citySelect.value = cities[0];
+        }
+        // 更新焦点城市但不立即触发（由外部调用）
+    }
+
+    provinceSelect.addEventListener('change', () => {
+        const province = provinceSelect.value;
+        const cities = provincesCities[province] || [];
+        if (cities.length > 0) {
+            const firstCity = cities[0];
+            updateCitiesByProvince(province, firstCity);
+            updateFocus(firstCity);
+        }
+    });
+
+    citySelect.addEventListener('change', (e) => {
+        updateFocus(e.target.value);
+    });
+
+    // 事件监听：趋势图和柱状图点击城市
+    trendChart.on('click', (p) => p.seriesName && updateFocus(p.seriesName));
+    breakChart.on('click', (p) => p.name && updateFocus(p.name));
+    document.getElementById('toggleAxis').onclick = () => { isAxisBroken = !isAxisBroken; initBreak(); };
+
+    // 粒子效果
+    particlesJS('particles-js', {
+        particles: {
+            number: { value: 40 },
+            color: { value: '#50D1B2' },
+            line_linked: { enable: true, opacity: 0.1 },
+            move: { speed: 1 }
+        }
+    });
+
+    // 时钟
+    setInterval(() => {
+        document.getElementById('liveClock').innerText = new Date().toLocaleString();
+    }, 1000);
+
+    // 初始化所有
+    initProvinces();
+    initTrend();
+    initBreak();
+    initMap();
+    initNationalPie();
+    initHeatmap();
+    initScatter();
+    initTop10();
+    updateFocus('北京市'); // 默认
+
+    // 窗口自适应
+    window.onresize = () => {
+        trendChart.resize(); breakChart.resize(); radarChart.resize(); flowMapChart.resize();
+        focusPieChart.resize(); nationalPieChart.resize(); heatmapChart.resize(); scatterChart.resize();
+        stackBarChart.resize(); top10Chart.resize();
+    };
+</script>
+</body>
+</html>

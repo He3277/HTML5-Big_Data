@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+<script src="https://fastly.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="https://fastly.jsdelivr.net/npm/echarts@5/map/js/china.js"></script>
+
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        darkBg: '#0A192F',
+        semiBlue: '#112240',
+        lightBlue: '#64FFDA',
+        secondaryBlue: '#4CC9F0',
+        titleBlue: '#50D1B2',
+      },
+      animation: {
+        'glow': 'glow 2s ease-in-out infinite alternate',
+        'flow': 'flow 15s linear infinite',
+        'spin-slow': 'spin 10s linear infinite',
+        'breath': 'breath 3s ease-in-out infinite alternate',
+        'float': 'float 6s ease-in-out infinite',
+      },
+      keyframes: {
+        glow: {
+          '0%': { textShadow: '0 0 2px #50D1B2, 0 0 4px #50D1B2' },
+          '100%': { textShadow: '0 0 6px #50D1B2, 0 0 14px #4CC9F0' },
+        },
+        flow: {
+          '0%': { backgroundPosition: '0% 50%' },
+          '100%': { backgroundPosition: '200% 50%' },
+        },
+        breath: {
+          '0%': { transform: 'scale(0.96)' },
+          '100%': { transform: 'scale(1.04)' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-10px)' },
+        }
+      }
+    }
+  }
+}
+</script>
+
+
+<style type="text/tailwindcss">
+@layer utilities{
+  .card-glow{ box-shadow: 0 0 15px rgba(80,209,178,.10), 0 0 30px rgba(76,201,240,.06); }
+  .card-outline{ border-radius: 16px 4px 16px 4px; border:1px solid rgba(80,209,178,.22); position:relative; overflow:hidden; }
+  .card-outline::after{ content:''; position:absolute; top:0; right:0; width:40px; height:40px; border-bottom:2px solid rgba(80,209,178,.28); border-left:2px solid rgba(80,209,178,.28); border-radius:0 0 0 12px; }
+  .card-outline::before{ content:''; position:absolute; bottom:0; left:0; width:40px; height:40px; border-top:2px solid rgba(80,209,178,.28); border-right:2px solid rgba(80,209,178,.28); border-radius:0 12px 0 0; }
+  .scanline{
+    background: linear-gradient(180deg, transparent 0%, rgba(80,209,178,.08) 45%, transparent 70%);
+    background-size: 100% 160%;
+    animation: flow 10s linear infinite;
+    mix-blend-mode: screen;
+  }
+  .glass{ background: rgba(17,34,64,.72); backdrop-filter: blur(10px); }
+  .btn-chip{ @apply px-3 py-1 rounded-full text-sm border border-titleBlue/30 text-titleBlue hover:bg-titleBlue/10 transition; }
+}
+</style>
+<style>
+  body{ background:#0A192F; overflow-x:hidden; }
+  #particles-js{ position:fixed; inset:0; z-index:0; }
+  .container{ position:relative; z-index:1; }
+  .neon-border{ border:1px solid rgba(80,209,178,.20); box-shadow: inset 0 0 20px rgba(80,209,178,.08); }
+  .grid-bg{
+    background-image: linear-gradient(rgba(76,201,240,.08) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(76,201,240,.08) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: radial-gradient(circle at 50% 0%, black 0%, transparent 70%);
+  }
+</style>
+
+
+<title>健康决策·智能预警 (全国省市完整版)</title>
+</head>
+<body class="text-white font-sans">
+<div id="particles-js"></div>
+<div class="container mx-auto px-4 py-8 md:py-12">
+  <div class="flex items-center justify-between gap-4 mb-4">
+    <a href="./index.html" class="inline-flex items-center gap-2 text-titleBlue hover:text-secondaryBlue transition">
+      <i class="fa fa-chevron-left"></i><span>返回导航</span>
+    </a>
+  
+  </div>
+
+  <!-- 省份-城市两级联动选择器（完整城市版） -->
+  <div class="flex items-center gap-3 mb-6 flex-wrap bg-semiBlue/30 p-4 rounded-lg neon-border">
+    <span class="text-sm text-gray-300"><i class="fa fa-map-marker mr-1 text-titleBlue"></i>地区选择：</span>
+    <select id="provinceSelector" class="bg-darkBg/80 border border-titleBlue/30 rounded px-3 py-1.5 text-sm text-white outline-none focus:border-titleBlue w-40">
+      <!-- 由JS动态填充 -->
+    </select>
+    <select id="citySelector" class="bg-darkBg/80 border border-titleBlue/30 rounded px-3 py-1.5 text-sm text-white outline-none focus:border-titleBlue w-48">
+      <!-- 由JS动态填充 -->
+    </select>
+    <span class="text-xs text-gray-400">所有地级市已完整收录，切换后图表自动更新</span>
+  </div>
+
+  <header class="mb-8 md:mb-10">
+    <h1 class="text-[clamp(1.8rem,4vw,3rem)] font-bold text-titleBlue animate-glow">健康决策·智能预警</h1>
+    <p class="text-gray-300 mt-3 max-w-4xl leading-relaxed">面向不同敏感人群的个性化预警：动态仪表盘 + 污染物构成玫瑰图 + 未来6小时预警柱状图。点击柱子自动生成防护建议卡，增强参与感。</p>
+  </header>
+
+  
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+  <section class="xl:col-span-7 card-outline glass card-glow p-4 md:p-6 relative overflow-hidden">
+    <div class="absolute inset-0 grid-bg opacity-60 pointer-events-none"></div>
+    <div class="relative flex items-center justify-between mb-4">
+      <h2 class="text-lg md:text-xl font-semibold">个性化健康预警</h2>
+      <button id="btn-sim" class="btn-chip"><i class="fa fa-bolt mr-1"></i>模拟一次污染过程</button>
+    </div>
+
+    <div class="relative grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="p-3 rounded-lg neon-border">
+        <p class="text-xs text-gray-400 mb-2">风险指数（动态仪表）</p>
+        <div id="gauge" class="w-full h-[280px]"></div>
+      </div>
+      <div class="p-3 rounded-lg neon-border">
+        <p class="text-xs text-gray-400 mb-2">污染物构成（玫瑰饼图）</p>
+        <div id="pie" class="w-full h-[280px]"></div>
+      </div>
+
+      <div class="p-3 rounded-lg neon-border md:col-span-2">
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-xs text-gray-400">未来6小时预警（可点选查看措施）</p>
+          <span class="text-xs text-gray-400">点击柱子 → 生成建议卡</span>
+        </div>
+        <div id="bar" class="w-full h-[280px]"></div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="xl:col-span-5 card-outline glass card-glow p-4 md:p-6 relative overflow-hidden">
+    <div class="absolute inset-0 scanline opacity-40 pointer-events-none"></div>
+    <div class="relative">
+      <h2 class="text-lg md:text-xl font-semibold">预警配置</h2>
+      <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="p-4 rounded-lg neon-border">
+          <p class="text-sm font-medium mb-2">敏感人群</p>
+          <div class="flex flex-wrap gap-2">
+            <button class="btn-chip grp" data-g="儿童">儿童</button>
+            <button class="btn-chip grp" data-g="孕妇">孕妇</button>
+            <button class="btn-chip grp" data-g="哮喘">哮喘</button>
+            <button class="btn-chip grp" data-g="老人">老人</button>
+            <button class="btn-chip grp" data-g="户外工作者">户外工作者</button>
+          </div>
+        </div>
+        <div class="p-4 rounded-lg neon-border">
+          <p class="text-sm font-medium mb-2">核心污染物</p>
+          <select id="pollutant" class="w-full bg-semiBlue/70 border border-titleBlue/20 rounded px-3 py-2 text-sm outline-none">
+            <option value="PM2.5">PM2.5</option>
+            <option value="O3">O₃</option>
+            <option value="NO2">NO₂</option>
+            <option value="SO2">SO₂</option>
+          </select>
+          <div class="mt-3">
+            <p class="text-sm font-medium mb-1">预警阈值</p>
+            <input id="th" type="range" min="50" max="250" value="120" class="w-full">
+            <div class="flex justify-between text-xs text-gray-400 mt-1">
+              <span>50</span><span>当前：<b id="thv" class="text-titleBlue">120</b></span><span>250</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 p-4 rounded-lg neon-border">
+        <div class="flex items-center justify-between">
+          <p class="text-sm font-medium">建议卡（自动生成）</p>
+          <button id="btn-clear" class="btn-chip"><i class="fa fa-trash mr-1"></i>清空</button>
+        </div>
+        <div id="cards" class="mt-3 space-y-3"></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<!-- ========== 深度数据图表区 (省市联动) ========== -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-6 mt-8">
+  <!-- 左侧大卡片：24h趋势 + 城市对比 -->
+  <div class="xl:col-span-7 card-outline glass card-glow p-4 md:p-6 relative overflow-hidden">
+    <div class="absolute inset-0 grid-bg opacity-40 pointer-events-none"></div>
+    <div class="relative">
+      <h2 class="text-lg md:text-xl font-semibold mb-4 flex items-center gap-2"><i class="fa fa-line-chart text-titleBlue"></i>深度时序·区域对比</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- 过去24h趋势 (多污染物) 联动城市 -->
+        <div class="p-3 rounded-lg neon-border lg:col-span-2">
+          <p class="text-xs text-gray-400 mb-2">过去24小时主要污染物趋势 (基于当前城市)</p>
+          <div id="trend24h" class="w-full h-[260px]"></div>
+        </div>
+        <!-- 多城市AQI横向柱状图 (展示部分代表性城市，但当前城市高亮) -->
+        <div class="p-3 rounded-lg neon-border">
+          <p class="text-xs text-gray-400 mb-2">主要城市实时AQI对比 (当前城市高亮)</p>
+          <div id="cityBar" class="w-full h-[240px]"></div>
+        </div>
+        <!-- 污染物浓度堆积面积 (联动城市) -->
+        <div class="p-3 rounded-lg neon-border">
+          <p class="text-xs text-gray-400 mb-2">PM2.5/PM10 堆积面积 (当前城市)</p>
+          <div id="stackArea" class="w-full h-[240px]"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右侧大卡片：健康影响因子 + 爬虫代码示例 -->
+  <div class="xl:col-span-5 card-outline glass card-glow p-4 md:p-6 relative overflow-hidden">
+    <div class="absolute inset-0 scanline opacity-30 pointer-events-none"></div>
+    <div class="relative">
+      <h2 class="text-lg md:text-xl font-semibold mb-4 flex items-center gap-2"><i class="fa fa-heartbeat text-secondaryBlue"></i>健康影响与数据源</h2>
+      <div class="space-y-4">
+        <!-- 第一行两个小指标卡片 (联动城市) -->
+        <div class="grid grid-cols-2 gap-3">
+          <div class="p-3 rounded-lg neon-border flex flex-col items-center">
+            <span class="text-2xl font-bold text-titleBlue" id="highRiskHour">6</span>
+            <span class="text-xs text-gray-400">今日高风险小时</span>
+          </div>
+          <div class="p-3 rounded-lg neon-border flex flex-col items-center">
+            <span class="text-2xl font-bold text-titleBlue" id="suggestCount">3</span>
+            <span class="text-xs text-gray-400">生效中建议</span>
+          </div>
+        </div>
+        <!-- 敏感人群风险雷达图 (联动城市) -->
+        <div class="p-3 rounded-lg neon-border">
+          <p class="text-xs text-gray-400 mb-2">不同人群敏感风险雷达 (当前城市)</p>
+          <div id="radarRisk" class="w-full h-[210px]"></div>
+        </div>
+        <!-- 折叠爬虫代码 (保持不变) -->
+        <details class="p-3 rounded-lg neon-border bg-semiBlue/30">
+          <summary class="text-sm font-medium text-titleBlue cursor-pointer"><i class="fa fa-code mr-2"></i>查看数据爬虫示例 (Python)</summary>
+          <div class="mt-3 text-xs text-gray-300 space-y-2">
+            <p>数据源: <a href="https://aqicn.org" target="_blank" class="text-secondaryBlue underline">https://aqicn.org</a> (世界空气质量指数) 或 中国环境监测总站</p>
+            <pre class="p-3 bg-darkBg/80 rounded overflow-x-auto text-gray-300">import requests
+from bs4 import BeautifulSoup
+
+# 示例：爬取aqicn.org某城市实时数据 (实际使用时请遵守robots.txt)
+city = "beijing"
+url = f"https://aqicn.org/city/{city}/"
+headers = {'User-Agent': 'Mozilla/5.0'}
+resp = requests.get(url, headers=headers)
+soup = BeautifulSoup(resp.text, 'html.parser')
+
+# 解析AQI值 (需根据页面结构调整)
+aqi_val = soup.find('div', class_='aqivalue').text.strip()
+print(f"{city} AQI: {aqi_val}")
+
+# 更规范的用法：使用aqicn API (需要token)
+# token = "your_token"
+# api_url = f"http://api.waqi.info/feed/{city}/?token={token}"</pre>
+          </div>
+        </details>
+        <!-- 额外提示 -->
+        <div class="flex items-center gap-2 text-xs text-gray-400 mt-2">
+          <i class="fa fa-refresh fa-spin"></i>
+          <span>数据随省市切换动态更新 · 点击“模拟污染过程”刷新当前城市数据</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="mt-12 text-center text-gray-500 text-sm">
+  <p>清穹智析 — 空气质量大数据可视化平台· 全国省市完整版 (包含所有地级市)</p>
+</footer>
+
+<script>
+// 粒子效果
+particlesJS('particles-js', {
+  particles:{
+    number:{value:70,density:{enable:true,value_area:800}},
+    color:{value:'#50D1B2'},
+    shape:{type:'circle'},
+    opacity:{value:0.5,random:true},
+    size:{value:3,random:true},
+    line_linked:{enable:true,distance:150,color:'#4CC9F0',opacity:0.18,width:1},
+    move:{enable:true,speed:1,direction:'none',random:true,straight:false,out_mode:'out',bounce:false,attract:{enable:true,rotateX:600,rotateY:1200}}
+  },
+  interactivity:{
+    detect_on:'canvas',
+    events:{onhover:{enable:true,mode:'grab'},onclick:{enable:true,mode:'push'},resize:true},
+    modes:{grab:{distance:140,line_linked:{opacity:0.55}},push:{particles_nb:4}}
+  },
+  retina_detect:true
+});
+
+window.addEventListener('scroll', () => {
+  const scrollPercent = Math.min(window.scrollY / (document.body.scrollHeight - window.innerHeight), 1);
+  const hue = scrollPercent * 28;
+  document.getElementById('particles-js').style.filter = `hue-rotate(${hue}deg)`;
+});
+</script>
+
+<script>
+// ========== 省份-城市完整数据 (包含全国所有地级市) ==========
+const provincesCities = {
+  "北京市": ["北京市"],
+  "天津市": ["天津市"],
+  "上海市": ["上海市"],
+  "重庆市": ["重庆市"],
+  "河北省": [
+    "石家庄市", "唐山市", "秦皇岛市", "邯郸市", "邢台市", "保定市", "张家口市", 
+    "承德市", "沧州市", "廊坊市", "衡水市", "辛集市", "定州市"
+  ],
+  "山西省": [
+    "太原市", "大同市", "阳泉市", "长治市", "晋城市", "朔州市", "晋中市", 
+    "运城市", "忻州市", "临汾市", "吕梁市"
+  ],
+  "内蒙古自治区": [
+    "呼和浩特市", "包头市", "乌海市", "赤峰市", "通辽市", "鄂尔多斯市", "呼伦贝尔市", 
+    "巴彦淖尔市", "乌兰察布市", "兴安盟", "锡林郭勒盟", "阿拉善盟"
+  ],
+  "辽宁省": [
+    "沈阳市", "大连市", "鞍山市", "抚顺市", "本溪市", "丹东市", "锦州市", 
+    "营口市", "阜新市", "辽阳市", "盘锦市", "铁岭市", "朝阳市", "葫芦岛市"
+  ],
+  "吉林省": [
+    "长春市", "吉林市", "四平市", "辽源市", "通化市", "白山市", "松原市", 
+    "白城市", "延边朝鲜族自治州"
+  ],
+  "黑龙江省": [
+    "哈尔滨市", "齐齐哈尔市", "鸡西市", "鹤岗市", "双鸭山市", "大庆市", "伊春市", 
+    "佳木斯市", "七台河市", "牡丹江市", "黑河市", "绥化市", "大兴安岭地区"
+  ],
+  "江苏省": [
+    "南京市", "无锡市", "徐州市", "常州市", "苏州市", "南通市", "连云港市", 
+    "淮安市", "盐城市", "扬州市", "镇江市", "泰州市", "宿迁市"
+  ],
+  "浙江省": [
+    "杭州市", "宁波市", "温州市", "嘉兴市", "湖州市", "绍兴市", "金华市", 
+    "衢州市", "舟山市", "台州市", "丽水市"
+  ],
+  "安徽省": [
+    "合肥市", "芜湖市", "蚌埠市", "淮南市", "马鞍山市", "淮北市", "铜陵市", 
+    "安庆市", "黄山市", "滁州市", "阜阳市", "宿州市", "六安市", "亳州市", 
+    "池州市", "宣城市"
+  ],
+  "福建省": [
+    "福州市", "厦门市", "莆田市", "三明市", "泉州市", "漳州市", "南平市", 
+    "龙岩市", "宁德市"
+  ],
+  "江西省": [
+    "南昌市", "景德镇市", "萍乡市", "九江市", "新余市", "鹰潭市", "赣州市", 
+    "吉安市", "宜春市", "抚州市", "上饶市"
+  ],
+  "山东省": [
+    "济南市", "青岛市", "淄博市", "枣庄市", "东营市", "烟台市", "潍坊市", 
+    "济宁市", "泰安市", "威海市", "日照市", "临沂市", "德州市", "聊城市", 
+    "滨州市", "菏泽市"
+  ],
+  "河南省": [
+    "郑州市", "开封市", "洛阳市", "平顶山市", "安阳市", "鹤壁市", "新乡市", 
+    "焦作市", "濮阳市", "许昌市", "漯河市", "三门峡市", "南阳市", "商丘市", 
+    "信阳市", "周口市", "驻马店市", "济源市"
+  ],
+  "湖北省": [
+    "武汉市", "黄石市", "十堰市", "宜昌市", "襄阳市", "鄂州市", "荆门市", 
+    "孝感市", "荆州市", "黄冈市", "咸宁市", "随州市", "恩施土家族苗族自治州", 
+    "仙桃市", "潜江市", "天门市", "神农架林区"
+  ],
+  "湖南省": [
+    "长沙市", "株洲市", "湘潭市", "衡阳市", "邵阳市", "岳阳市", "常德市", 
+    "张家界市", "益阳市", "郴州市", "永州市", "怀化市", "娄底市", "湘西土家族苗族自治州"
+  ],
+  "广东省": [
+    "广州市", "韶关市", "深圳市", "珠海市", "汕头市", "佛山市", "江门市", 
+    "湛江市", "茂名市", "肇庆市", "惠州市", "梅州市", "汕尾市", "河源市", 
+    "阳江市", "清远市", "东莞市", "中山市", "潮州市", "揭阳市", "云浮市"
+  ],
+  "广西壮族自治区": [
+    "南宁市", "柳州市", "桂林市", "梧州市", "北海市", "防城港市", "钦州市", 
+    "贵港市", "玉林市", "百色市", "贺州市", "河池市", "来宾市", "崇左市"
+  ],
+  "海南省": [
+    "海口市", "三亚市", "三沙市", "儋州市", "五指山市", "琼海市", "文昌市", 
+    "万宁市", "东方市", "定安县", "屯昌县", "澄迈县", "临高县", "白沙黎族自治县", 
+    "昌江黎族自治县", "乐东黎族自治县", "陵水黎族自治县", "保亭黎族苗族自治县", "琼中黎族苗族自治县"
+  ],
+  "四川省": [
+    "成都市", "自贡市", "攀枝花市", "泸州市", "德阳市", "绵阳市", "广元市", 
+    "遂宁市", "内江市", "乐山市", "南充市", "眉山市", "宜宾市", "广安市", 
+    "达州市", "雅安市", "巴中市", "资阳市", "阿坝藏族羌族自治州", "甘孜藏族自治州", 
+    "凉山彝族自治州"
+  ],
+  "贵州省": [
+    "贵阳市", "六盘水市", "遵义市", "安顺市", "毕节市", "铜仁市", "黔西南布依族苗族自治州", 
+    "黔东南苗族侗族自治州", "黔南布依族苗族自治州"
+  ],
+  "云南省": [
+    "昆明市", "曲靖市", "玉溪市", "保山市", "昭通市", "丽江市", "普洱市", 
+    "临沧市", "楚雄彝族自治州", "红河哈尼族彝族自治州", "文山壮族苗族自治州", "西双版纳傣族自治州", 
+    "大理白族自治州", "德宏傣族景颇族自治州", "怒江傈僳族自治州", "迪庆藏族自治州"
+  ],
+  "西藏自治区": [
+    "拉萨市", "日喀则市", "昌都市", "林芝市", "山南市", "那曲市", "阿里地区"
+  ],
+  "陕西省": [
+    "西安市", "铜川市", "宝鸡市", "咸阳市", "渭南市", "延安市", "汉中市", 
+    "榆林市", "安康市", "商洛市"
+  ],
+  "甘肃省": [
+    "兰州市", "嘉峪关市", "金昌市", "白银市", "天水市", "武威市", "张掖市", 
+    "平凉市", "酒泉市", "庆阳市", "定西市", "陇南市", "临夏回族自治州", 
+    "甘南藏族自治州"
+  ],
+  "青海省": [
+    "西宁市", "海东市", "海北藏族自治州", "黄南藏族自治州", "海南藏族自治州", 
+    "果洛藏族自治州", "玉树藏族自治州", "海西蒙古族藏族自治州"
+  ],
+  "宁夏回族自治区": [
+    "银川市", "石嘴山市", "吴忠市", "固原市", "中卫市"
+  ],
+  "新疆维吾尔自治区": [
+    "乌鲁木齐市", "克拉玛依市", "吐鲁番市", "哈密市", "昌吉回族自治州", "博尔塔拉蒙古自治州", 
+    "巴音郭楞蒙古自治州", "阿克苏地区", "克孜勒苏柯尔克孜自治州", "喀什地区", "和田地区", 
+    "伊犁哈萨克自治州", "塔城地区", "阿勒泰地区", "石河子市", "阿拉尔市", "图木舒克市", 
+    "五家渠市", "北屯市", "铁门关市", "双河市", "可克达拉市", "昆玉市", "胡杨河市"
+  ],
+  "台湾省": [
+    "台北市", "新北市", "桃园市", "台中市", "台南市", "高雄市", "基隆市", 
+    "新竹市", "嘉义市", "新竹县", "苗栗县", "彰化县", "南投县", "云林县", 
+    "嘉义县", "屏东县", "宜兰县", "花莲县", "台东县", "澎湖县", "金门县", 
+    "连江县"
+  ],
+  "香港特别行政区": ["香港岛", "九龙", "新界"],
+  "澳门特别行政区": ["澳门半岛", "氹仔", "路环", "路氹城"]
+};
+
+// 初始化图表实例
+const gauge = echarts.init(document.getElementById('gauge'));
+const pie = echarts.init(document.getElementById('pie'));
+const bar = echarts.init(document.getElementById('bar'));
+const trend24h = echarts.init(document.getElementById('trend24h'));
+const cityBar = echarts.init(document.getElementById('cityBar'));
+const stackArea = echarts.init(document.getElementById('stackArea'));
+const radarRisk = echarts.init(document.getElementById('radarRisk'));
+
+// 全局状态
+let selectedCity = '北京市';   // 默认城市
+let group = '儿童';
+let pollutant = 'PM2.5';
+let threshold = 120;
+let risk = 42;
+
+// ---------- 工具函数：根据城市名生成稳定的污染基准值 (无需预定义数据库) ----------
+function hashCode(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const chr = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + chr;
+    hash |= 0; // 转换为32位整数
+  }
+  return Math.abs(hash);
+}
+
+function getCityBase(city) {
+  const seed = (hashCode(city) % 1000) / 1000; // 0-1 之间稳定值
+  // 根据种子生成各污染物基准值
+  const pm25 = 25 + seed * 80;          // 25 ~ 105
+  const pm10 = pm25 * 1.2 + 5;           // 稍高
+  const o3 = 30 + seed * 100;            // 30 ~ 130
+  const no2 = 15 + seed * 60;            // 15 ~ 75
+  const so2 = 5 + seed * 40;             // 5 ~ 45
+  const co = 0.5 + seed * 2.5;           // 0.5 ~ 3.0
+  // 估算AQI (简化)
+  const aqi = Math.round(pm25 * 0.5 + o3 * 0.3 + no2 * 0.2);
+  return { pm25, pm10, o3, no2, so2, co, aqi };
+}
+
+// 获取某城市某污染物的典型值（带随机波动，因子用于模拟变化）
+function getCityTypical(city, pollutantType, factor = 1.0) {
+  const base = getCityBase(city);
+  let val;
+  switch(pollutantType) {
+    case 'PM2.5': val = base.pm25; break;
+    case 'PM10': val = base.pm10; break;
+    case 'O₃': val = base.o3; break;
+    case 'NO₂': val = base.no2; break;
+    case 'SO₂': val = base.so2; break;
+    case 'CO': val = base.co * 50; break; // 放大系数便于显示
+    default: val = 50;
+  }
+  // 随机波动 ±20% (factor额外调整)
+  const r = 0.8 + Math.random() * 0.4;
+  return Math.round(val * r * factor);
+}
+
+// 获取城市AQI (用于对比图)
+function getCityAQI(city) {
+  const base = getCityBase(city);
+  // 加入随机波动
+  return Math.round(base.aqi * (0.85 + Math.random() * 0.3));
+}
+
+// 风险等级转换
+function riskText(v){
+  if(v<35) return ['低','户外活动正常'];
+  if(v<60) return ['中','敏感人群注意缩短户外时间'];
+  if(v<80) return ['高','建议佩戴口罩，减少运动'];
+  return ['极高','尽量室内，开启净化/就医咨询'];
+}
+
+// 更新所有图表 (城市改变时调用)
+function refreshAllCharts() {
+  renderPie();
+  renderBar();
+  renderGauge();
+  renderTrend24h();
+  renderCityBar();
+  renderStackArea();
+  renderRadar();
+  // 更新顶部小数字
+  document.getElementById('highRiskHour').innerText = Math.floor(Math.random()*6+3);
+  document.getElementById('suggestCount').innerText = Math.floor(Math.random()*5+1);
+}
+
+// ---------- 各图表渲染函数 (依赖 selectedCity) ----------
+function renderGauge(){
+  const [lvl, tip] = riskText(risk);
+  gauge.setOption({
+    tooltip:{formatter:'{a}<br/>{b}: {c}'},
+    series:[{
+      name:'风险指数', type:'gauge',
+      min:0, max:100,
+      splitNumber:5,
+      axisLine:{lineStyle:{width:12}},
+      pointer:{length:'60%', width:5},
+      title:{color:'#cbd5e1', fontSize:14, offsetCenter:[0,'70%']},
+      detail:{valueAnimation:true, color:'#50D1B2', fontSize:26, offsetCenter:[0,'40%']},
+      data:[{value:risk, name:`${group} · ${lvl}`}]
+    }],
+    graphic:[{
+      type:'text',
+      left:'center', top:'8%',
+      style:{text:`${tip}`, fill:'#94a3b8', font:'12px sans-serif'}
+    }]
+  }, true);
+}
+
+function renderPie(){
+  const parts = ['PM2.5','PM10','O₃','NO₂','SO₂','CO'];
+  const data = parts.map(p => ({
+    name: p,
+    value: getCityTypical(selectedCity, p, 0.9 + Math.random()*0.3)
+  }));
+  pie.setOption({
+    tooltip:{trigger:'item'},
+    series:[{
+      type:'pie',
+      radius:['20%','72%'],
+      roseType:'area',
+      label:{color:'#cbd5e1'},
+      itemStyle:{borderRadius:8,borderColor:'rgba(17,34,64,.9)',borderWidth:1},
+      data
+    }]
+  }, true);
+}
+
+function renderBar(){
+  const hours = ['+1h','+2h','+3h','+4h','+5h','+6h'];
+  const baseAqi = getCityBase(selectedCity).aqi;
+  const vals = hours.map((_, i) => {
+    let trend = baseAqi + i * (Math.random()*6 - 2);
+    trend = Math.max(30, Math.min(250, Math.round(trend)));
+    return trend;
+  });
+  bar.setOption({
+    tooltip:{trigger:'axis'},
+    grid:{left:40,right:20,top:20,bottom:35},
+    xAxis:{type:'category',data:hours,axisLabel:{color:'#94a3b8'},axisLine:{lineStyle:{color:'rgba(76,201,240,.25)'}}},
+    yAxis:{type:'value',axisLabel:{color:'#94a3b8'},splitLine:{lineStyle:{color:'rgba(76,201,240,.12)'}}},
+    series:[{
+      type:'bar',
+      data:vals,
+      barWidth:'50%',
+      itemStyle:{borderRadius:[6,6,0,0]},
+      markLine:{
+        symbol:'none',
+        data:[{yAxis:threshold}],
+        lineStyle:{type:'dashed', width:2, opacity:0.8},
+        label:{color:'#cbd5e1', formatter:`阈值 ${threshold}`}
+      }
+    }]
+  }, true);
+
+  const last = vals[vals.length-1];
+  risk = Math.max(10, Math.min(98, Math.round((last/250)*100)));
+  renderGauge();
+}
+
+function renderTrend24h() {
+  const hours = [];
+  for (let i = 23; i >= 0; i--) hours.push(`${i}:00`);
+  const pm25 = hours.map(() => getCityTypical(selectedCity, 'PM2.5', 0.8 + Math.random()*0.5));
+  const pm10 = hours.map(() => getCityTypical(selectedCity, 'PM10', 0.8 + Math.random()*0.5));
+  const o3 = hours.map(() => getCityTypical(selectedCity, 'O₃', 0.8 + Math.random()*0.5));
+  trend24h.setOption({
+    tooltip: {trigger: 'axis'},
+    legend: {textStyle:{color:'#cbd5e1'}, bottom:0},
+    grid: {left:40,right:20,top:30,bottom:40},
+    xAxis: {type:'category', data:hours, axisLabel:{color:'#94a3b8', rotate:30, interval:5}},
+    yAxis: {type:'value', axisLabel:{color:'#94a3b8'}, splitLine:{lineStyle:{color:'rgba(76,201,240,.12)'}}},
+    series: [
+      {name:'PM2.5', type:'line', data:pm25, smooth:true, color:'#64FFDA'},
+      {name:'PM10', type:'line', data:pm10, smooth:true, color:'#4CC9F0'},
+      {name:'O₃', type:'line', data:o3, smooth:true, color:'#F72585'}
+    ]
+  });
+}
+
+function renderCityBar() {
+  // 选取一些代表性城市展示对比，包括当前城市
+  const demoCities = ['北京市','上海市','广州市','成都市','西安市','武汉市'];
+  // 确保当前城市在列表中，若不在则替换最后一个
+  let finalList = [...demoCities];
+  if (!finalList.includes(selectedCity)) {
+    finalList[finalList.length-1] = selectedCity;
+  } else {
+    // 如果当前城市已在列表，保持原样，但为了高亮，我们标记颜色
+  }
+  const aqis = finalList.map(c => getCityAQI(c));
+  const colors = finalList.map(c => c === selectedCity ? '#FFD166' : '#50D1B2');
+  cityBar.setOption({
+    tooltip: {trigger:'axis', axisPointer:{type:'shadow'}},
+    grid: {left:40,right:20,top:20,bottom:20},
+    xAxis: {type:'value', axisLabel:{color:'#94a3b8'}, splitLine:{lineStyle:{color:'rgba(76,201,240,.12)'}}},
+    yAxis: {type:'category', data:finalList, axisLabel:{color:'#cbd5e1'}},
+    series: [{
+      name:'AQI', type:'bar', data:aqis,
+      itemStyle:{borderRadius:[0,8,8,0], color: (params) => colors[params.dataIndex]},
+      label: {show:true, position:'right', color:'#cbd5e1', fontWeight:'bold'}
+    }]
+  });
+}
+
+function renderStackArea() {
+  const hours = ['00','04','08','12','16','20'];
+  const pm25 = hours.map(() => getCityTypical(selectedCity, 'PM2.5', 0.8 + Math.random()*0.5));
+  const pm10 = hours.map(() => getCityTypical(selectedCity, 'PM10', 0.8 + Math.random()*0.5));
+  stackArea.setOption({
+    tooltip: {trigger:'axis'},
+    grid: {left:40,right:20,top:30,bottom:20},
+    xAxis: {type:'category', data:hours, axisLabel:{color:'#94a3b8'}},
+    yAxis: {type:'value', axisLabel:{color:'#94a3b8'}, splitLine:{lineStyle:{color:'rgba(76,201,240,.12)'}}},
+    series: [
+      {name:'PM2.5', type:'line', areaStyle:{color:'rgba(100,255,218,0.2)'}, data:pm25, color:'#64FFDA'},
+      {name:'PM10', type:'line', areaStyle:{color:'rgba(76,201,240,0.2)'}, data:pm10, color:'#4CC9F0'}
+    ]
+  });
+}
+
+function renderRadar() {
+  const indicators = [
+    {name:'儿童', max:100},
+    {name:'孕妇', max:100},
+    {name:'哮喘', max:100},
+    {name:'老人', max:100},
+    {name:'户外工作者', max:100}
+  ];
+  const baseRisk = getCityBase(selectedCity).aqi / 100; // 0.3~1.3
+  const values = indicators.map((_, idx) => {
+    let offset = [1.2, 1.1, 1.3, 1.2, 1.0][idx];
+    let val = 30 + baseRisk * 40 * offset;
+    return Math.min(98, Math.round(val));
+  });
+  radarRisk.setOption({
+    radar: {
+      indicator: indicators,
+      center: ['50%','50%'],
+      radius:'60%',
+      axisName: {color:'#94a3b8'}
+    },
+    series: [{
+      type:'radar',
+      data: [{value: values, name:'当前风险', areaStyle:{color:'rgba(80,209,178,0.3)'}}],
+      lineStyle: {color:'#50D1B2', width:2},
+      itemStyle: {color:'#4CC9F0'}
+    }]
+  });
+}
+
+// 建议卡生成
+function adviceFor(v){
+  const [lvl, tip] = riskText(v);
+  const pol = pollutant;
+  const base = {
+    '儿童': '优先减少户外高强度活动；回家后清洁面部/鼻腔；保持室内通风与净化平衡。',
+    '孕妇': '减少外出与公共交通暴露；关注心肺不适；必要时咨询医生。',
+    '哮喘': '随身携带急救药物；避免运动与粉尘环境；出现喘鸣及时就医。',
+    '老人': '避免早晚高峰外出；监测血压/心率；保持适当补水与休息。',
+    '户外工作者': '佩戴防护口罩；间歇休息；提升水分补给与工作轮换。'
+  }[group] || '';
+  return `【${lvl}】${tip}（主导：${pol}）。${base}`;
+}
+
+function addCard(title, desc){
+  const wrap = document.getElementById('cards');
+  const el = document.createElement('div');
+  el.className='p-4 rounded-lg neon-border bg-titleBlue/5';
+  el.innerHTML = `<div class="flex items-start justify-between gap-3">
+    <div>
+      <p class="text-titleBlue font-semibold">${title}</p>
+      <p class="text-sm text-gray-200 mt-1">${desc}</p>
+    </div>
+    <button class="btn-chip btn-del"><i class="fa fa-times"></i></button>
+  </div>`;
+  el.querySelector('.btn-del').addEventListener('click', ()=> el.remove());
+  wrap.prepend(el);
+  while(wrap.children.length>6) wrap.lastChild.remove();
+}
+
+// ---------- 省市联动下拉框初始化 ----------
+const provinceSelect = document.getElementById('provinceSelector');
+const citySelect = document.getElementById('citySelector');
+
+// 填充省份
+function initProvinces() {
+  const provinces = Object.keys(provincesCities);
+  provinces.forEach(p => {
+    const option = document.createElement('option');
+    option.value = p;
+    option.textContent = p;
+    provinceSelect.appendChild(option);
+  });
+  // 默认选中第一个（北京市）
+  provinceSelect.value = '北京市';
+  updateCities();
+}
+
+// 根据选中的省份更新城市下拉框
+function updateCities() {
+  const selectedProvince = provinceSelect.value;
+  const cities = provincesCities[selectedProvince] || [];
+  citySelect.innerHTML = '';
+  cities.forEach(c => {
+    const option = document.createElement('option');
+    option.value = c;
+    option.textContent = c;
+    citySelect.appendChild(option);
+  });
+  // 默认选中第一个城市
+  if (cities.length > 0) {
+    citySelect.value = cities[0];
+    selectedCity = cities[0];
+  }
+  refreshAllCharts();
+}
+
+// 省份变更事件
+provinceSelect.addEventListener('change', updateCities);
+
+// 城市变更事件
+citySelect.addEventListener('change', (e) => {
+  selectedCity = e.target.value;
+  toast(`已切换到 ${selectedCity}，更新数据`);
+  refreshAllCharts();
+});
+
+// 模拟污染过程
+document.getElementById('btn-sim').addEventListener('click', ()=>{
+  refreshAllCharts();
+  toast(`已模拟一次污染过程 (${selectedCity} 数据联动更新)`);
+});
+
+// 柱状图点击生成建议卡
+bar.on('click', (p)=>{
+  const value = p.value;
+  const v = Math.max(5, Math.min(98, Math.round((value/250)*100)));
+  addCard(`未来${p.name} 预警建议 (${selectedCity})`, adviceFor(v));
+});
+
+// 人群切换
+document.querySelectorAll('.grp').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    group = b.dataset.g;
+    toast(`已选择敏感人群：${group}`);
+    renderGauge();
+  });
+});
+
+// 污染物切换
+document.getElementById('pollutant').addEventListener('change', (e)=>{
+  pollutant = e.target.value;
+  toast(`已选择污染物：${pollutant}`);
+  renderPie();
+});
+
+// 阈值滑动
+document.getElementById('th').addEventListener('input', (e)=>{
+  threshold = +e.target.value;
+  document.getElementById('thv').textContent = threshold;
+  renderBar();
+});
+
+// 清空建议卡
+document.getElementById('btn-clear').addEventListener('click', ()=>{ document.getElementById('cards').innerHTML=''; });
+
+// 简易toast
+function toast(msg){
+  const el = document.createElement('div');
+  el.className = 'fixed top-4 right-4 z-[60] px-4 py-3 rounded-lg glass card-outline card-glow';
+  el.innerHTML = `<div class="text-titleBlue font-semibold mb-1">交互反馈</div><div class="text-sm text-gray-200">${msg}</div>`;
+  document.body.appendChild(el);
+  setTimeout(()=>{ el.style.transition='opacity .4s ease, transform .4s ease'; el.style.opacity='0'; el.style.transform='translateY(-10px)'; }, 1400);
+  setTimeout(()=> el.remove(), 1900);
+}
+
+// 初始化省份下拉框并渲染图表
+initProvinces();
+refreshAllCharts();
+
+// 响应窗口大小
+window.addEventListener('resize', ()=>{ 
+  gauge.resize(); pie.resize(); bar.resize();
+  trend24h.resize(); cityBar.resize(); stackArea.resize(); radarRisk.resize();
+});
+</script>
+
+</body>
+</html>
+</html>
